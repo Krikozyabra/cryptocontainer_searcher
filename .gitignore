@@ -1,0 +1,53 @@
+# ==========================================
+# 1. CMake & Build Directories
+# ==========================================
+# Ignore any directory starting with 'build' (e.g., build_win, build_linux, build/)
+build*/
+/build/
+
+# Ignore alternative IDE build folders (e.g., CLion, QtCreator)
+/cmake-build-*/
+/out/
+/bin/
+
+# In case CMake is run directly in the root directory by accident (in-source build):
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+Makefile
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps/
+
+# ==========================================
+# 2. C++ Compiled Binaries and Objects
+# ==========================================
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dylib
+*.dll
+*.exe
+
+# ==========================================
+# 3. IDE and Text Editor configurations
+# ==========================================
+# VS Code
+.vscode/
+# Visual Studio
+.vs/
+# JetBrains (CLion / Rider / IntelliJ)
+.idea/
+# Qt Creator
+CMakeLists.txt.user*
+
+# ==========================================
+# 4. CMake Presets (Optional but recommended)
+# ==========================================
+# 'CMakeUserPresets.json' is machine-specific and should not be shared.
+# ('CMakePresets.json' CAN be committed if you want to share build configurations)
+CMakeUserPresets.json
