@@ -53,3 +53,5 @@ CMakeLists.txt.user*
 CMakeUserPresets.json
 
 .*
+
+test_file.bin
