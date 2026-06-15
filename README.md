@@ -15,3 +15,6 @@
 ### LUKS
 - first 4 bytes is "LUKS"
 - next some bytes has config 
+
+### PGPFile
+- first 6 bytes is [0x8c, 0x0d, 0x04, 0x09, 0x03, 0x0A]

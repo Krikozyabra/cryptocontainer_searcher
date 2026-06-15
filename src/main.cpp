@@ -37,18 +37,27 @@ void check_for_enc_container(const fs::directory_entry& path_to_object, entropy:
             std::cout << "This folder is encrypted with EncFS\n";
             return;
         }
-
-        // Check for LUKS header (exactly 4 bytes)
+        
         std::ifstream byte_stream(path_to_object.path(), std::ios::binary);
         if (byte_stream) {
-            char magic[4];
+            uint8_t magic[6];
             if (byte_stream.read(magic, sizeof(magic))) {
+                // Check for LUKS header (exactly 4 bytes)
                 if (std::memcmp(magic, "LUKS", 4) == 0) {
                     std::cout << path_to_object.path() << "\n";
                     std::cout << "File is encrypted with LUKS\n";
                     return;
                 }
+                
+                // Check for PGP eader (exactly 6 bytes)
+                uint8_t pgp_magic[6]{0x8c, 0x0d, 0x04, 0x09, 0x03, 0x0A};
+                if (std::memcmp(magic, pgp_magic, 6) == 0) {
+                    std::cout << path_to_object.path() << "\n";
+                    std::cout << "File is encrypted with PGP\n";
+                    return;
+                }
             }
+
         }
 
         // Check for TrueCrypt/VeraCrypt 
