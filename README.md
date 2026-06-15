@@ -16,10 +16,9 @@
 - first 4 bytes is "LUKS"
 - next some bytes has config 
 
-<<<<<<< HEAD
 ### PGPFile
 - first 6 bytes is [0x8c, 0x0d, 0x04, 0x09, 0x03, 0x0A]
-=======
+
 ## Build
 ### Windows
 
@@ -36,4 +35,3 @@
     ./build/crypto_search --help
     ./build/crypto_search --version
     ./build/crypto_search --folder ~ --recursive
->>>>>>> d6d8c3a5a8ba8b3638062c14ebdff94934d7e04d
