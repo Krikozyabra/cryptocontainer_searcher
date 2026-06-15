@@ -9,14 +9,14 @@
 namespace fs = std::filesystem;
 
 void usage_exit(){
-    std::cout << "Crypto search works only with TrueCrypt/VeraCrypt, EncFS, LUKS, PGP containers.\n \
-                 Usage:\n\
-                 \tcrypto_search --folder 'Folder' [--recursive]\n\n\
-                 You can use the following commands:\n\
-                 \t--help - to see this message\n\
-                 \t--version - to see version of the program\n\
-                 \t--folder - to set folder to search in\n\
-                 \t--recursive - to check nested folders\n";
+    std::cout << "Crypto search works only with TrueCrypt/VeraCrypt, EncFS, LUKS, PGP containers.\n"
+                 "Usage:\n"
+                 "\tcrypto_search --folder [folder] [--recursive]\n\n"
+                 "You can use the following commands:\n"
+                 "\t--help - to see this message\n"
+                 "\t--version - to see version of the program\n"
+                 "\t--folder - to set folder to search in (default='/')\n"
+                 "\t--recursive - to check nested folders\n";
     std::exit(EXIT_SUCCESS);
 }
 
