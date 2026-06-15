@@ -3,85 +3,136 @@
 #include <cstring>
 #include <fstream>
 #include <filesystem>
+#include <cstdlib> 
 #include <entropy/shannon_entropy.h>
 
 namespace fs = std::filesystem;
 
 void usage_exit(){
-    std::cout<<"Crypto search work only with TrueCrypt/VeraCrypt, EncFS, LUKS, PGP containers.\n\
-                Usage:\n\
-                \tcrypto_search --folder 'Folder'\n\n\
-                You can use next commands:\n\
-                \t--help - to see this message\n\
-                \t--version - to see version of the program\n\
-                \t--folder - to set folder to search in\n\
-                \t--recursive - to check nested folders\n";
-    exit(EXIT_SUCCESS);
+    std::cout << "Crypto search works only with TrueCrypt/VeraCrypt, EncFS, LUKS, PGP containers.\n \
+                 Usage:\n\
+                 \tcrypto_search --folder 'Folder' [--recursive]\n\n\
+                 You can use the following commands:\n\
+                 \t--help - to see this message\n\
+                 \t--version - to see version of the program\n\
+                 \t--folder - to set folder to search in\n\
+                 \t--recursive - to check nested folders\n";
+    std::exit(EXIT_SUCCESS);
 }
 
 void version_exit(){
-    std::cout<<"0.0.1\n";
-    exit(EXIT_SUCCESS);
+    std::cout << "0.0.2\n";
+    std::exit(EXIT_SUCCESS);
+}
+
+void check_for_enc_container(const fs::directory_entry& path_to_object, entropy::ShannonEncryptionChecker& checker){
+    std::error_code ec;
+    
+    if (fs::is_regular_file(path_to_object, ec)) {
+        std::string filename = path_to_object.path().filename().string();
+        
+        // Check for EncFS 
+        if (filename == ".encfs6" || filename == ".encfs6.xml") {
+            std::cout << path_to_object.path().parent_path() << "\n";
+            std::cout << "This folder is encrypted with EncFS\n";
+            return;
+        }
+
+        // Check for LUKS header (exactly 4 bytes)
+        std::ifstream byte_stream(path_to_object.path(), std::ios::binary);
+        if (byte_stream) {
+            char magic[4];
+            if (byte_stream.read(magic, sizeof(magic))) {
+                if (std::memcmp(magic, "LUKS", 4) == 0) {
+                    std::cout << path_to_object.path() << "\n";
+                    std::cout << "File is encrypted with LUKS\n";
+                    return;
+                }
+            }
+        }
+
+        // Check for TrueCrypt/VeraCrypt 
+        uintmax_t fsize = fs::file_size(path_to_object, ec);
+        if (!ec && fsize > 0 && fsize % 512 == 0) {
+            double entropy_value = checker.get_file_entropy(path_to_object.path());
+            if (entropy_value > 7.9) {
+                std::cout << path_to_object.path() << "\n";
+                std::cout << "File is encrypted with TrueCrypt\\VeraCrypt\n";
+                return;
+            }
+        }
+    }
+}
+
+void folder_traveler(const fs::path& searching_folder, entropy::ShannonEncryptionChecker& checker, const bool is_recursive){
+    std::error_code ec;
+    auto dir_iter = fs::directory_iterator(searching_folder, ec);
+    if (ec) {
+        std::cerr << "Warning: Cannot access folder " << searching_folder << " (" << ec.message() << ")\n";
+        return;
+    }
+
+    for (const auto& entry : dir_iter) {
+        std::error_code entry_ec;
+        bool is_dir = entry.is_directory(entry_ec);
+        if (entry_ec) {
+            continue; 
+        }
+
+        // Run detection logic
+        check_for_enc_container(entry, checker);
+
+        // Recurse 
+        if (is_recursive && is_dir) {
+            folder_traveler(entry.path(), checker, is_recursive);
+        }
+    }
 }
 
 int main(int argc, char** argv) {
-    setlocale(LC_ALL, 0);
+    std::setlocale(LC_ALL, 0);
     fs::path searching_folder{"/"}; 
     bool is_recursive = false;
 
     entropy::ShannonEncryptionChecker checker;
     
-    if(argc<3) usage_exit();
-    if(strcmp(argv[1], "--version") == 0) version_exit();
-    if(strcmp(argv[1], "--help") == 0) usage_exit();
-    if(strcmp(argv[1], "--folder") == 0){
-        fs::path pathname{argv[2]};
-        if(!fs::exists(pathname)){
-            std::cout<<"Folder: "<<pathname<<" doesn't exists"<<std::endl;
-            exit(EXIT_SUCCESS);
-        }
-        searching_folder = pathname;
+    if (argc < 2) {
+        usage_exit();
     }
-    if(argc == 4 && strcmp(argv[3], "--recursive") == 0)
-        is_recursive = true;
+
+    for (int i = 1; i < argc; ++i) {
+        if (std::strcmp(argv[i], "--help") == 0) {
+            usage_exit();
+        } else if (std::strcmp(argv[i], "--version") == 0) {
+            version_exit();
+        } else if (std::strcmp(argv[i], "--folder") == 0) {
+            if (i + 1 < argc) {
+                fs::path pathname{argv[++i]};
+                std::error_code ec;
+                if (!fs::exists(pathname, ec)) {
+                    std::cerr << "Error: Folder '" << pathname << "' does not exist.\n";
+                    return EXIT_FAILURE;
+                }
+                searching_folder = pathname;
+            } else {
+                std::cerr << "Error: --folder requires an argument.\n";
+                usage_exit();
+            }
+        } else if (std::strcmp(argv[i], "--recursive") == 0) {
+            is_recursive = true;
+        } else {
+            std::cerr << "Unknown option: " << argv[i] << "\n";
+            usage_exit();
+        }
+    }
 
     try {
-        for(const auto& entry : fs::directory_iterator(searching_folder))
-        {
-            std::cout<<entry<<std::endl;
-            if(entry.is_directory() == false){
-                // check for LUKSs header
-                std::ifstream byte_stream(entry.path(), std::ios::binary);
-                char some_bytes[5]{};
-                byte_stream.read(reinterpret_cast<char*>(&some_bytes), sizeof some_bytes);
-                some_bytes[4] = '\0';
-                if(strcmp(some_bytes, "LUKS") == 0){
-                    std::cout << "File is encrypted with LUKS" << std::endl;
-                    continue;
-                }
-                
-                // check for TrueCrypt/VeraCrypt
-                double entropy_value = checker.get_file_entropy(entry.path());
-                if(entropy_value > 7.9 && entry.file_size()%512 == 0){
-                    std::cout << "File is encrypted with TrueCrypt\\VeraCrypt" << std::endl;
-                    continue;
-                }
-            }
-            else{
-                for(const auto& nested_entry : fs::directory_iterator(entry)){
-                    std::string filename{nested_entry.path().stem().string()};
-                    if(filename.compare(".encfs6") == 0){
-                        std::cout << "This folder encrypted with EncFS" << std::endl;
-                        break;
-                    }
-                }
-            }
-        }
+        folder_traveler(searching_folder, checker, is_recursive);
     } 
     catch (const std::exception& e) {
-        std::cerr << "Error: " << e.what() << "\n";
-        return 1;
+        std::cerr << "Fatal error: " << e.what() << "\n";
+        return EXIT_FAILURE;
     }
 
-    return 0;
+    return EXIT_SUCCESS;
 }
