@@ -54,7 +54,7 @@ void check_for_enc_container(const fs::directory_entry& path_to_object, entropy:
         // Check for TrueCrypt/VeraCrypt 
         uintmax_t fsize = fs::file_size(path_to_object, ec);
         if (!ec && fsize > 0 && fsize % 512 == 0) {
-            double entropy_value = checker.get_file_entropy(path_to_object.path());
+            double entropy_value = checker.get_file_entropy(path_to_object.path().string());
             if (entropy_value > 7.9) {
                 std::cout << path_to_object.path() << "\n";
                 std::cout << "File is encrypted with TrueCrypt\\VeraCrypt\n";

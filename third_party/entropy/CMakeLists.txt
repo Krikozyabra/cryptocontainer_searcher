@@ -3,8 +3,6 @@ set(TARGET entropy)
 add_library(${TARGET})
 
 target_include_directories(${TARGET}
-PRIVATE
-    ${Boost_INCLUDE_DIRS} 
 PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 )

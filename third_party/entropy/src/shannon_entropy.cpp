@@ -1,11 +1,11 @@
 #include <entropy/shannon_entropy.h>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <fstream>
 #include <cassert>
 
 using namespace entropy;
 using namespace std;
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 
 bool entropy::ShannonEncryptionChecker::interrupt_all_ = false;
 
