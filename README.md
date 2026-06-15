@@ -15,3 +15,20 @@
 ### LUKS
 - first 4 bytes is "LUKS"
 - next some bytes has config 
+
+## Build
+### Windows
+
+    cmake --toolchain mingw-toolchain.cmake -B build
+    cmake --build build
+
+### Linux
+
+    cmake -B build
+    cmake --build build
+
+## Usage
+
+    ./build/crypto_search --help
+    ./build/crypto_search --version
+    ./build/crypto_search --folder ~ --recursive
