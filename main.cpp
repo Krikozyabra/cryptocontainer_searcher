@@ -1,8 +1,11 @@
 #include "crypto_utils/crypto_search.h"
+#include "crypto_utils/crypto_decrypt.h"
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
 #include <iostream>
+#include <sstream>
+#include <unistd.h>
 
 namespace fs = std::filesystem;
 
@@ -26,25 +29,28 @@ void version_exit() {
     std::exit(EXIT_SUCCESS);
 }
 
-void check_for_enc_container(const fs::directory_entry &path_to_object) {
+void check_for_enc_container(const fs::directory_entry &path_to_object, const bool try_to_decrypt) {
     std::error_code ec;
 
     if (fs::is_regular_file(path_to_object, ec)) {
-        if (crypto_search::check_for_encfs_file(path_to_object)) {
+        if (crypto_search::encfs_file(path_to_object)) {
             std::cout << path_to_object.path().parent_path() << std::endl;
             std::cout << "This folder is encrypted with EncFS" << std::endl;
+            if (try_to_decrypt){
+                crypto_decrypt::encfs(path_to_object, "qwefghnm,");
+            }
         }
-        if (crypto_search::check_for_luks_file(path_to_object)) {
+        if (crypto_search::luks_file(path_to_object)) {
             std::cout << path_to_object.path() << std::endl;
             std::cout << "This is the container and encrypted with LUKS"
                       << std::endl;
         }
-        if (crypto_search::check_for_pgp_file(path_to_object)) {
+        if (crypto_search::pgp_file(path_to_object)) {
             std::cout << path_to_object.path() << std::endl;
             std::cout << "This is the container and encrypted with PGP"
                       << std::endl;
         }
-        if (crypto_search::check_for_veracrypt(path_to_object)) {
+        if (crypto_search::veracrypt_truecrypt_file(path_to_object)) {
             std::cout << path_to_object.path() << std::endl;
             std::cout << "This is the container and encrypted with "
                          "TrueCrypt\\VeraCrypt"
@@ -59,7 +65,7 @@ void check_for_enc_container(const fs::directory_entry &path_to_object) {
 }
 
 void folder_traveler(const fs::path &searching_folder,
-                     const fs::path &pass_file, const bool is_recursive) {
+                     const fs::path &pass_file, const bool is_recursive, const bool try_to_decrypt) {
     std::error_code ec;
     auto dir_iter = fs::directory_iterator(searching_folder, ec);
     if (ec) {
@@ -76,13 +82,35 @@ void folder_traveler(const fs::path &searching_folder,
         }
 
         // Run detection logic
-        check_for_enc_container(entry);
+        check_for_enc_container(entry, try_to_decrypt);
 
         // Recurse
         if (is_recursive && is_dir) {
-            folder_traveler(entry.path(), pass_file, is_recursive);
+            folder_traveler(entry.path(), pass_file, is_recursive, try_to_decrypt);
         }
     }
+}
+
+bool is_command_in_path(const std::string &command) {
+    const char *path_env = std::getenv("PATH");
+    if (!path_env)
+        return false;
+
+    std::stringstream ss(path_env);
+    std::string directory{};
+
+    const char delimiter{':'};
+
+    while (std::getline(ss, directory, delimiter)) {
+        fs::path full_path = fs::path(directory) / command;
+
+        if (fs::exists(full_path) && fs::is_regular_file(full_path)) {
+            if (access(full_path.c_str(), X_OK) == 0) {
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 int main(int argc, char **argv) {
@@ -90,7 +118,6 @@ int main(int argc, char **argv) {
     fs::path searching_folder{"/"};
     fs::path pass_file{};
     bool is_recursive = false;
-    std::cout << pass_file << std::endl;
     if (argc < 2) {
         usage_exit();
     }
@@ -140,8 +167,26 @@ int main(int argc, char **argv) {
         }
     }
 
+    const bool try_to_decrypt = (pass_file != "");
+
+    if (try_to_decrypt) {
+        uint8_t not_installed_count{0};
+        for (const std::string &util :
+             {"encfs", "truecrypt", "veracrypt", "gpg", "cryptsetup"}) {
+            if (!is_command_in_path(util)) {
+                std::cerr << util
+                          << " is not installed, please install and try again"
+                          << std::endl;
+                not_installed_count++;
+            }
+        }
+        if (not_installed_count > 0) {
+            return EXIT_FAILURE;
+        }
+    }
+
     try {
-        folder_traveler(searching_folder, pass_file, is_recursive);
+        folder_traveler(searching_folder, pass_file, is_recursive, try_to_decrypt);
     } catch (const std::exception &e) {
         std::cerr << "Fatal error: " << e.what() << "\n";
         return EXIT_FAILURE;

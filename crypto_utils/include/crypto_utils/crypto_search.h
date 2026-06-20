@@ -5,9 +5,9 @@ namespace fs = std::filesystem;
 
 namespace crypto_search{
 
-    bool check_for_encfs_file(const fs::directory_entry &file);
-    bool check_for_luks_file(const fs::directory_entry &file);
-    bool check_for_pgp_file(const fs::directory_entry &file);
-    bool check_for_veracrypt(const fs::directory_entry &file);
+    bool encfs_file(const fs::directory_entry &file);
+    bool luks_file(const fs::directory_entry &file);
+    bool pgp_file(const fs::directory_entry &file);
+    bool veracrypt_truecrypt_file(const fs::directory_entry &file);
 
 }

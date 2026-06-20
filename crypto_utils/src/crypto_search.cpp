@@ -8,7 +8,7 @@ namespace fs = std::filesystem;
 
 namespace crypto_search {
 
-bool check_for_encfs_file(const fs::directory_entry &file) {
+bool encfs_file(const fs::directory_entry &file) {
     std::string filename = file.path().filename().string();
 
     if (filename.compare(".encfs6") == 0 ||
@@ -18,7 +18,7 @@ bool check_for_encfs_file(const fs::directory_entry &file) {
     return false;
 }
 
-bool check_for_luks_file(const fs::directory_entry &file) {
+bool luks_file(const fs::directory_entry &file) {
     std::ifstream byte_stream(file.path().string(), std::ios::binary);
     if (byte_stream) {
         uint8_t magic[4];
@@ -31,7 +31,7 @@ bool check_for_luks_file(const fs::directory_entry &file) {
     return false;
 }
 
-bool check_for_pgp_file(const fs::directory_entry &file){
+bool pgp_file(const fs::directory_entry &file){
     std::ifstream byte_stream(file.path().string(), std::ios::binary);
     uint8_t pgp_magic[6]{0x8c, 0x0d, 0x04, 0x09, 0x03, 0x0A};
     uint8_t magic[6]{};
@@ -44,7 +44,7 @@ bool check_for_pgp_file(const fs::directory_entry &file){
 }
 
 
-bool check_for_veracrypt(const fs::directory_entry &file){
+bool veracrypt_truecrypt_file(const fs::directory_entry &file){
     uintmax_t fsize = fs::file_size(file);
     
     entropy::ShannonEncryptionChecker checker;
