@@ -34,4 +34,40 @@ void encfs(const fs::path& file, const std::string& password){
     std::cout << mount_directory << std::endl;
 }
 
+void luks(const fs::path& file, const std::string& password){
+    // 1) create mount point
+    const fs::path mount_directory{"/mnt/"+file.filename().string()+"_mount"}; 
+    // 2) decrypt and create device
+    const std::string device_name{file.filename().string()+"_device"};
+    std::string command{"cryptsetup open "+file.string()+" "+device_name+" -"};
+
+    FILE* pipe = popen(command.c_str(), "w");
+    if (!pipe) {
+        std::cerr << "An error occurred while pipe openning" << std::endl;
+        return;
+    }
+
+    fputs(password.c_str(), pipe);
+    fputs("\n", pipe);
+
+    int result = pclose(pipe);
+
+    if (result != 0){
+        std::cerr << "An error occurred while attempting to decrypt" << std::endl;
+        return;
+    }
+    // 3) mount device to mount point
+
+    command="mount /dev/mapper/"+device_name+" "+mount_directory.string();
+    result = system(command.c_str());
+
+    if (!result){
+        std::cout << "The decrypted LUKS container mounted at:" << std::endl;
+        std::cout << mount_directory << std::endl;
+    }else {
+        std::cerr << "Failed to mount device" << std::endl;
+    }
+    // 4) print mount point
+}
+
 }
