@@ -8,14 +8,16 @@ set(CMAKE_CXX_EXTENSIONS ON)
 # Find dependencies required by the entropy library
 find_package(Threads REQUIRED)
 
-# 2. Add the entropy directory from the third_party folder
+# Add the external libraries
 add_subdirectory(third_party/entropy)
+add_subdirectory(crypto_utils)
 
-# 3. Define your executable, referencing main.cpp in the src directory
-add_executable(crypto_search src/main.cpp)
+# Define executable, referencing main.cpp
+add_executable(crypto_search main.cpp)
 
-# 4. Link everything together
+# Link everything together
 target_link_libraries(crypto_search PRIVATE 
+    crypto_utils
     entropy
     Threads::Threads
 )
@@ -29,3 +31,31 @@ elseif(UNIX AND NOT APPLE)
     target_link_options(crypto_search PRIVATE -static-libgcc -static-libstdc++)
 
 endif()
+
+# Enable testing
+enable_testing()
+
+# Fetch Catch2 from GitHub
+include(FetchContent)
+FetchContent_Declare(
+  Catch2
+  GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+  GIT_TAG        v3.4.0
+)
+FetchContent_MakeAvailable(Catch2)
+
+# Define test executable
+add_executable(unit_tests 
+    tests/test_search.cpp
+)
+
+# Link the test executable with Catch2 and other dependencies
+target_link_libraries(unit_tests PRIVATE 
+    Catch2::Catch2WithMain
+    crypto_utils
+    entropy
+    Threads::Threads
+)
+
+# Register the test executable with CTest
+add_test(NAME RunUnitTests COMMAND unit_tests)
