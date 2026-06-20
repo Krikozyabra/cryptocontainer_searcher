@@ -5,6 +5,23 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS ON)
 
+# Fetch Catch2 from GitHub
+include(FetchContent)
+FetchContent_Declare(
+  Catch2
+  GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+  GIT_TAG        v3.4.0
+)
+
+# Fetch JsonParser from GitHub
+set(JSON_BuildTests OFF CACHE INTERNAL "") 
+FetchContent_Declare(
+  json
+  URL https://github.com/nlohmann/json/releases/download/v3.12.0/json.tar.xz
+)
+
+FetchContent_MakeAvailable(Catch2 json)
+
 # Find dependencies required by the entropy library
 find_package(Threads REQUIRED)
 
@@ -18,7 +35,6 @@ add_executable(crypto_search main.cpp)
 # Link everything together
 target_link_libraries(crypto_search PRIVATE 
     crypto_utils
-    entropy
     Threads::Threads
 )
 
@@ -35,15 +51,6 @@ endif()
 # Enable testing
 enable_testing()
 
-# Fetch Catch2 from GitHub
-include(FetchContent)
-FetchContent_Declare(
-  Catch2
-  GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-  GIT_TAG        v3.4.0
-)
-FetchContent_MakeAvailable(Catch2)
-
 # Define test executable
 add_executable(unit_tests 
     tests/test_search.cpp
@@ -53,7 +60,6 @@ add_executable(unit_tests
 target_link_libraries(unit_tests PRIVATE 
     Catch2::Catch2WithMain
     crypto_utils
-    entropy
     Threads::Threads
 )
 

@@ -15,7 +15,9 @@ void usage_exit() {
                  "\t--help - to see this message\n"
                  "\t--version - to see version of the program\n"
                  "\t--folder - to set folder to search in (default='/')\n"
-                 "\t--recursive - to check nested folders\n";
+                 "\t--recursive - to check nested folders\n"
+                 "\t--decrypt [file] - to try decryption every found container "
+                 "with passwords in file\n";
     std::exit(EXIT_SUCCESS);
 }
 
@@ -34,21 +36,30 @@ void check_for_enc_container(const fs::directory_entry &path_to_object) {
         }
         if (crypto_search::check_for_luks_file(path_to_object)) {
             std::cout << path_to_object.path() << std::endl;
-            std::cout << "This is the container and encrypted with LUKS" << std::endl;
+            std::cout << "This is the container and encrypted with LUKS"
+                      << std::endl;
         }
         if (crypto_search::check_for_pgp_file(path_to_object)) {
             std::cout << path_to_object.path() << std::endl;
-            std::cout << "This is the container and encrypted with PGP" << std::endl;
+            std::cout << "This is the container and encrypted with PGP"
+                      << std::endl;
         }
         if (crypto_search::check_for_veracrypt(path_to_object)) {
             std::cout << path_to_object.path() << std::endl;
-            std::cout << "This is the container and encrypted with TrueCrypt\\VeraCrypt" << std::endl;
+            std::cout << "This is the container and encrypted with "
+                         "TrueCrypt\\VeraCrypt"
+                      << std::endl;
         }
+    }
+
+    if (ec == std::errc::permission_denied) {
+        std::cout << path_to_object.path() << std::endl;
+        std::cout << "No access to this file. Run in 'sudo' mode" << std::endl;
     }
 }
 
 void folder_traveler(const fs::path &searching_folder,
-                     const bool is_recursive) {
+                     const fs::path &pass_file, const bool is_recursive) {
     std::error_code ec;
     auto dir_iter = fs::directory_iterator(searching_folder, ec);
     if (ec) {
@@ -69,7 +80,7 @@ void folder_traveler(const fs::path &searching_folder,
 
         // Recurse
         if (is_recursive && is_dir) {
-            folder_traveler(entry.path(), is_recursive);
+            folder_traveler(entry.path(), pass_file, is_recursive);
         }
     }
 }
@@ -77,8 +88,9 @@ void folder_traveler(const fs::path &searching_folder,
 int main(int argc, char **argv) {
     std::setlocale(LC_ALL, 0);
     fs::path searching_folder{"/"};
+    fs::path pass_file{};
     bool is_recursive = false;
-
+    std::cout << pass_file << std::endl;
     if (argc < 2) {
         usage_exit();
     }
@@ -104,6 +116,24 @@ int main(int argc, char **argv) {
             }
         } else if (std::strcmp(argv[i], "--recursive") == 0) {
             is_recursive = true;
+        } else if (std::strcmp(argv[i], "--decrypt") == 0) {
+            if (i + 1 < argc) {
+                fs::path file{argv[++i]};
+                std::error_code ec;
+                if (!fs::exists(file, ec)) {
+                    std::cerr << "Error: file '" << file
+                              << "' does not exist.\n";
+                    return EXIT_FAILURE;
+                }
+                if (!fs::is_regular_file(file, ec)) {
+                    std::cerr << "Error: the '" << file << "' is not a file.\n";
+                    return EXIT_FAILURE;
+                }
+                pass_file = file;
+            } else {
+                std::cerr << "Error: --decrypt requires an argument.\n";
+                usage_exit();
+            }
         } else {
             std::cerr << "Unknown option: " << argv[i] << "\n";
             usage_exit();
@@ -111,7 +141,7 @@ int main(int argc, char **argv) {
     }
 
     try {
-        folder_traveler(searching_folder, is_recursive);
+        folder_traveler(searching_folder, pass_file, is_recursive);
     } catch (const std::exception &e) {
         std::cerr << "Fatal error: " << e.what() << "\n";
         return EXIT_FAILURE;

@@ -1,6 +1,5 @@
 #define once
 #include <filesystem>
-#include "entropy/shannon_entropy.h"
 
 namespace fs = std::filesystem;
 
