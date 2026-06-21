@@ -36,6 +36,7 @@ add_executable(crypto_search main.cpp)
 target_link_libraries(crypto_search PRIVATE 
     crypto_utils
     Threads::Threads
+    nlohmann_json::nlohmann_json
 )
 
 if(WIN32)

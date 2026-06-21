@@ -42,7 +42,7 @@ int encfs(const fs::path &file, const std::string &password) {
 
     if (result != 0) {
         fs::remove(mount_directory);
-        return ERR_MOUNT;
+        return ERR_DECRYPT;
     }
     // 4) print the mount link
     std::cout << "\nThe decrypted encfs folder was mounted at:" << std::endl;

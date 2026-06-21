@@ -6,8 +6,11 @@
 #include <iostream>
 #include <sstream>
 #include <unistd.h>
+#include <fstream>
+#include <nlohmann/json.hpp>
 
 namespace fs = std::filesystem;
+using json = nlohmann::json;
 
 void usage_exit() {
     std::cout << "Crypto search works only with TrueCrypt/VeraCrypt, EncFS, "
@@ -29,32 +32,45 @@ void version_exit() {
     std::exit(EXIT_SUCCESS);
 }
 
-void check_for_enc_container(const fs::directory_entry &path_to_object, const bool try_to_decrypt) {
+int check_for_enc_container(const fs::directory_entry &path_to_object, const bool try_to_decrypt, const json& pass_file) {
     std::error_code ec;
+    int return_code{crypto_decrypt::SUCCESS};
 
     if (fs::is_regular_file(path_to_object, ec)) {
         if (crypto_search::encfs_file(path_to_object)) {
             std::cout << path_to_object.path().parent_path() << std::endl;
             std::cout << "This folder is encrypted with EncFS" << std::endl;
             if (try_to_decrypt){
-                crypto_decrypt::encfs(path_to_object, "qwefghnm,");
+                for (const std::string& passphrase : pass_file["encfs"]){
+                    return_code = crypto_decrypt::encfs(path_to_object, passphrase);
+                    if(return_code == crypto_decrypt::SUCCESS) break;  
+                }
             }
+            return return_code;
         }
         if (crypto_search::luks_file(path_to_object)) {
             std::cout << path_to_object.path() << std::endl;
             std::cout << "This is the container and encrypted with LUKS"
                       << std::endl;
             if (try_to_decrypt){
-                crypto_decrypt::luks(path_to_object, "qwefghnm,");
+                for (const std::string& passphrase : pass_file["luks"]){
+                    return_code = crypto_decrypt::luks(path_to_object, passphrase);
+                    if(return_code == crypto_decrypt::SUCCESS) break;  
+                }
             }
+            return return_code;
         }
         if (crypto_search::pgp_file(path_to_object)) {
             std::cout << path_to_object.path() << std::endl;
             std::cout << "This is the container and encrypted with PGP"
                       << std::endl;
             if (try_to_decrypt){
-                crypto_decrypt::pgp(path_to_object, "qweasdzxc");
+                for (const std::string& passphrase : pass_file["pgp"]){
+                    return_code = crypto_decrypt::pgp(path_to_object, passphrase);
+                    if(return_code == crypto_decrypt::SUCCESS) break;  
+                }
             }
+            return return_code;
         }
         if (crypto_search::veracrypt_truecrypt_file(path_to_object)) {
             std::cout << path_to_object.path() << std::endl;
@@ -62,8 +78,16 @@ void check_for_enc_container(const fs::directory_entry &path_to_object, const bo
                          "TrueCrypt\\VeraCrypt"
                       << std::endl;
             if (try_to_decrypt){
-                crypto_decrypt::truecrypt(path_to_object, "qwefghm,.", true);
+                for (const std::string& passphrase : pass_file["truecrypt"]){
+                    return_code = crypto_decrypt::truecrypt(path_to_object, passphrase);
+                    if(return_code == crypto_decrypt::SUCCESS) break;  
+                }
+                for (const std::string& passphrase : pass_file["veracrypt"]){
+                    return_code = crypto_decrypt::truecrypt(path_to_object, passphrase, true);
+                    if(return_code == crypto_decrypt::SUCCESS) break;  
+                }
             }
+            return return_code;
         }
     }
 
@@ -71,10 +95,12 @@ void check_for_enc_container(const fs::directory_entry &path_to_object, const bo
         std::cout << path_to_object.path() << std::endl;
         std::cout << "No access to this file. Run in 'sudo' mode" << std::endl;
     }
+
+    return return_code;
 }
 
 void folder_traveler(const fs::path &searching_folder,
-                     const fs::path &pass_file, const bool is_recursive, const bool try_to_decrypt) {
+                     const json &pass_file, const bool is_recursive, const bool try_to_decrypt) {
     std::error_code ec;
     auto dir_iter = fs::directory_iterator(searching_folder, ec);
     if (ec) {
@@ -91,8 +117,24 @@ void folder_traveler(const fs::path &searching_folder,
         }
 
         // Run detection logic
-        check_for_enc_container(entry, try_to_decrypt);
-
+        int return_result = check_for_enc_container(entry, try_to_decrypt, pass_file);
+        switch (return_result) {
+            case crypto_decrypt::ERR_DECRYPT:
+                std::cerr << "No password found for this container" << std::endl;
+                break;
+            case crypto_decrypt::ERR_MOUNT:
+                std::cerr << "An error occurred while mounting" << std::endl;
+                break;
+            case crypto_decrypt::ERR_PIPE_OPEN:
+                std::cerr << "An error occurred while openning pipe for password" << std::endl;
+                break;
+            case crypto_decrypt::ERR_QUERY_PIPE:
+                std::cerr << "An error occured while openning pipe for read loop device path" << std::endl;
+                break;
+            case crypto_decrypt::ERR_LOOP_DEVICE:
+                std::cerr << "An error occured while creating loop device" << std::endl;
+                break;
+        }
         // Recurse
         if (is_recursive && is_dir) {
             folder_traveler(entry.path(), pass_file, is_recursive, try_to_decrypt);
@@ -125,7 +167,7 @@ bool is_command_in_path(const std::string &command) {
 int main(int argc, char **argv) {
     std::setlocale(LC_ALL, 0);
     fs::path searching_folder{"/"};
-    fs::path pass_file{};
+    json pass_file{};
     bool is_recursive = false;
     if (argc < 2) {
         usage_exit();
@@ -165,7 +207,8 @@ int main(int argc, char **argv) {
                     std::cerr << "Error: the '" << file << "' is not a file.\n";
                     return EXIT_FAILURE;
                 }
-                pass_file = file;
+                std::ifstream json_file(file.string());
+                pass_file = json::parse(json_file);
             } else {
                 std::cerr << "Error: --decrypt requires an argument.\n";
                 usage_exit();
@@ -176,7 +219,7 @@ int main(int argc, char **argv) {
         }
     }
 
-    const bool try_to_decrypt = (pass_file != "");
+    const bool try_to_decrypt = (!pass_file.empty());
 
     if (try_to_decrypt) {
         uint8_t not_installed_count{0};
