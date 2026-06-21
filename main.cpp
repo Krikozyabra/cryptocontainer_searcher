@@ -52,6 +52,9 @@ void check_for_enc_container(const fs::directory_entry &path_to_object, const bo
             std::cout << path_to_object.path() << std::endl;
             std::cout << "This is the container and encrypted with PGP"
                       << std::endl;
+            if (try_to_decrypt){
+                crypto_decrypt::pgp(path_to_object, "qweasdzxc");
+            }
         }
         if (crypto_search::veracrypt_truecrypt_file(path_to_object)) {
             std::cout << path_to_object.path() << std::endl;
