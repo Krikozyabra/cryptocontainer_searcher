@@ -61,6 +61,9 @@ void check_for_enc_container(const fs::directory_entry &path_to_object, const bo
             std::cout << "This is the container and encrypted with "
                          "TrueCrypt\\VeraCrypt"
                       << std::endl;
+            if (try_to_decrypt){
+                crypto_decrypt::truecrypt(path_to_object, "qwefghm,.", true);
+            }
         }
     }
 
@@ -178,7 +181,7 @@ int main(int argc, char **argv) {
     if (try_to_decrypt) {
         uint8_t not_installed_count{0};
         for (const std::string &util :
-             {"encfs", "truecrypt", "veracrypt", "gpg", "cryptsetup"}) {
+             {"encfs", "gpg", "cryptsetup"}) {
             if (!is_command_in_path(util)) {
                 std::cerr << util
                           << " is not installed, please install and try again"
