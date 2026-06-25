@@ -42,7 +42,7 @@ int check_for_enc_container(const fs::directory_entry &path_to_object,
     int return_code{crypto_decrypt::SUCCESS};
 
     if (fs::is_regular_file(path_to_object, ec)) {
-        if (crypto_search::encfs_file(path_to_object)) {
+        if (crypto_search::encfs_file(path_to_object.path())) {
             std::cout << path_to_object.path().parent_path() << std::endl;
             std::cout << "This folder is encrypted with EncFS" << std::endl;
             if (try_to_decrypt) {
@@ -55,7 +55,7 @@ int check_for_enc_container(const fs::directory_entry &path_to_object,
             }
             return return_code;
         }
-        if (crypto_search::luks_file(path_to_object)) {
+        if (crypto_search::luks_file(path_to_object.path())) {
             std::cout << path_to_object.path() << std::endl;
             std::cout << "This is the container and encrypted with LUKS"
                       << std::endl;
@@ -69,7 +69,7 @@ int check_for_enc_container(const fs::directory_entry &path_to_object,
             }
             return return_code;
         }
-        if (crypto_search::pgp_file(path_to_object)) {
+        if (crypto_search::pgp_file(path_to_object.path())) {
             std::cout << path_to_object.path() << std::endl;
             std::cout << "This is the container and encrypted with PGP"
                       << std::endl;
@@ -83,7 +83,7 @@ int check_for_enc_container(const fs::directory_entry &path_to_object,
             }
             return return_code;
         }
-        if (crypto_search::veracrypt_truecrypt_file(path_to_object)) {
+        if (crypto_search::veracrypt_truecrypt_file(path_to_object.path())) {
             std::cout << path_to_object.path() << std::endl;
             std::cout << "This is the container and encrypted with "
                          "TrueCrypt\\VeraCrypt"

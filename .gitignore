@@ -56,3 +56,4 @@ CMakeUserPresets.json
 
 test_file.bin
 some_pass.json
+test_*/
