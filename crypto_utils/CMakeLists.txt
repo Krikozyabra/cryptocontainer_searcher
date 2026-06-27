@@ -14,4 +14,5 @@ target_link_libraries(${TARGET}
     PRIVATE
     entropy
     nlohmann_json::nlohmann_json
+    tcdecrypt_core
 )

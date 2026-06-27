@@ -1,7 +1,7 @@
 {
     "encfs": ["testpass", "another_pass12313", "qwefghnm,"],
     "pgp": ["qweasdzxc"],
-    "truecrypt": [],
-    "veracrypt": [],
+    "truecrypt": ["qwefghnm,", "qwefghm,."],
+    "veracrypt": ["qwefghm,.", "qwefghnm,"],
     "luks": ["qwefghnm,"]
 }

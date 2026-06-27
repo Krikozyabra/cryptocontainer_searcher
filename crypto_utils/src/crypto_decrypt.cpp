@@ -1,3 +1,5 @@
+#include "crypto_utils/crypto_decrypt.h"
+#include "tcdecrypt.hpp"
 #include <algorithm>
 #include <array>
 #include <cctype>
@@ -6,8 +8,6 @@
 #include <filesystem>
 #include <iostream>
 #include <string>
-
-#include "crypto_utils/crypto_decrypt.h"
 
 namespace fs = std::filesystem;
 
@@ -191,48 +191,23 @@ int pgp(const fs::path &file, const std::string &password) {
 }
 
 int truecrypt(const fs::path &file, const std::string &password,
-              const bool is_veracrypt) {
-    // 1) Init mount point, device name
+              const fs::path &out_decrypted, const bool is_veracrypt) {
     const std::string stem_str = file.stem().string();
-    const fs::path mount_directory = fs::path("/mnt") / (stem_str + "_mount");
-    const std::string device_name = stem_str + "_device";
-    const fs::path device_path = fs::path("/dev/mapper") / device_name;
-
-    if (!safe_create_directory(mount_directory)) {
-        return ERR_MOUNT;
-    }
-
-    // 2) Decrypt and create device
-    const std::string command = std::string("cryptsetup open --type tcrypt ") +
-                                (is_veracrypt ? "--veracrypt " : "") +
-                                quote(file) + " " + quote(device_name) + " -";
-
-    int result = execute_with_password(command, password);
-    if (result == -1) {
-        fs::remove(mount_directory);
-        return ERR_PIPE_OPEN;
-    }
-    if (result != 0) {
-        fs::remove(mount_directory);
+    const fs::path decrypted_file(out_decrypted /
+                                  fs::path(stem_str + "_decrypted"));
+    tcdecrypt::OpenOptions opt;
+    opt.password = password;
+    opt.path = file.c_str();
+    uint64_t some_number{0};
+    try {
+        some_number = tcdecrypt::decryptToFile(opt, decrypted_file.c_str());
+    } catch (...) {
         return ERR_DECRYPT;
     }
+    std::cout << "is_veracrypt: " << is_veracrypt << "\n";
+    std::cout << "Some number: " << some_number << "\n";
+    std::cout << "File was decrypted in " << decrypted_file << "\n";
 
-    // 3) Mount device to mount point
-    const std::string mount_command =
-        "mount " + quote(device_path) + " " + quote(mount_directory);
-    result = std::system(mount_command.c_str());
-
-    // 4) Print mount point
-    if (result == 0) {
-        std::cout << "The decrypted TrueCrypt/VeraCrypt container mounted at:\n"
-                  << mount_directory << '\n';
-        return SUCCESS;
-    } else {
-        const std::string close_command =
-            "cryptsetup close " + quote(device_name);
-        std::system(close_command.c_str());
-        fs::remove(mount_directory);
-        return ERR_MOUNT;
-    }
+    return SUCCESS;
 }
 } // namespace crypto_decrypt

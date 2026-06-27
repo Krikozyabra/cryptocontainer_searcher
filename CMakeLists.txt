@@ -5,6 +5,8 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS ON)
 
+set(TCDECRYPT_BUILD_CLI OFF CACHE BOOL "" FORCE)
+
 # Fetch Catch2 from GitHub
 include(FetchContent)
 FetchContent_Declare(
@@ -27,6 +29,7 @@ find_package(Threads REQUIRED)
 
 # Add the external libraries
 add_subdirectory(third_party/entropy)
+add_subdirectory(third_party/tcdecrypt)
 add_subdirectory(crypto_utils)
 
 # Define executable, referencing main.cpp

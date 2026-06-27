@@ -15,7 +15,7 @@ constexpr int ERR_LOOP_DEVICE = 4;
 constexpr int ERR_QUERY_PIPE = 5;
 
 int encfs(const fs::path &, const std::string& password);
-int truecrypt(const fs::path &, const std::string& password, const bool is_veracrypt = false);
+int truecrypt(const fs::path &, const std::string&, const fs::path &, const bool is_veracrypt = false);
 int pgp(const fs::path &, const std::string& password);
 int luks(const fs::path &, const std::string& password);
 
