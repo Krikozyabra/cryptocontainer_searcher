@@ -11,6 +11,9 @@
 
 #include <stdio.h>
 #include <sys/stat.h>
+#if defined(_MSC_VER) || defined(__MINGW32__)
+#	include <io.h>   // _commit, _fileno   // <-- added
+#endif
 #include "Platform/Windows/System.h"
 #include "Platform/File.h"
 

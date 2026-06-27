@@ -7,7 +7,9 @@
 #include <iostream>
 #include <nlohmann/json.hpp>
 #include <sstream>
+#ifndef _WIN32
 #include <unistd.h>
+#endif
 
 namespace fs = std::filesystem;
 using json = nlohmann::json;
@@ -304,9 +306,10 @@ int main(int argc, char **argv) {
     }
 
     const bool try_to_decrypt = !pass_file.empty();
-
+    
+#ifndef _WIN32
     if (try_to_decrypt) {
-        int not_installed_count{0};
+        int not_installed_count{};
         for (const std::string &util : {"encfs", "gpg", "cryptsetup"}) {
             if (!is_command_in_path(util)) {
                 std::cerr
@@ -319,6 +322,8 @@ int main(int argc, char **argv) {
             return EXIT_FAILURE;
         }
     }
+#endif
+    
 
     try {
         folder_traveler(config.searching_folder, pass_file, config.is_recursive,

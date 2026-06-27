@@ -42,6 +42,7 @@ using std::map;
 using std::pair;
 using std::make_pair;
 using std::shared_ptr;
+using std::make_shared;
 using std::stringstream;
 using std::wstringstream;
 using std::istringstream;

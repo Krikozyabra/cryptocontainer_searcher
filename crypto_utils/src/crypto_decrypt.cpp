@@ -11,6 +11,12 @@
 
 namespace fs = std::filesystem;
 
+// On MSVC the POSIX pipe functions are spelled with a leading underscore.
+#if defined(_MSC_VER)
+#	define popen  _popen
+#	define pclose _pclose
+#endif
+
 namespace {
 // Helper: trim trailing whitespace from system command output
 void trim_trailing_whitespace(std::string &s) {
@@ -197,10 +203,10 @@ int truecrypt(const fs::path &file, const std::string &password,
                                   fs::path(stem_str + "_decrypted"));
     tcdecrypt::OpenOptions opt;
     opt.password = password;
-    opt.path = file.c_str();
+    opt.path = file.string();
     uint64_t some_number{0};
     try {
-        some_number = tcdecrypt::decryptToFile(opt, decrypted_file.c_str());
+        some_number = tcdecrypt::decryptToFile(opt, decrypted_file.string());
     } catch (...) {
         return ERR_DECRYPT;
     }
