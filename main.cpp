@@ -81,7 +81,7 @@ int check_for_enc_container(const fs::directory_entry &path_to_object,
             if (try_to_decrypt) {
                 for (const std::string &passphrase : pass_file["pgp"]) {
                     return_code =
-                        crypto_decrypt::pgp(path_to_object, passphrase);
+                        crypto_decrypt::pgp(path_to_object, passphrase, out_decrypted);
                     if (return_code == crypto_decrypt::SUCCESS)
                         break;
                 }
@@ -101,8 +101,8 @@ int check_for_enc_container(const fs::directory_entry &path_to_object,
                         break;
                 }
                 for (const std::string &passphrase : pass_file["veracrypt"]) {
-                    return_code = crypto_decrypt::truecrypt(path_to_object,
-                                                            passphrase, out_decrypted, true);
+                    return_code = crypto_decrypt::veracrypt(path_to_object,
+                                                            passphrase, out_decrypted);
                     if (return_code == crypto_decrypt::SUCCESS)
                         break;
                 }

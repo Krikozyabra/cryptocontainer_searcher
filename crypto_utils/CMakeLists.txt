@@ -15,4 +15,6 @@ target_link_libraries(${TARGET}
     entropy
     nlohmann_json::nlohmann_json
     tcdecrypt_core
+    vcdecrypt::vcdecrypt
+    gpgdecrypt
 )

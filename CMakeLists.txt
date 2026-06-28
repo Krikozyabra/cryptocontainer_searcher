@@ -30,6 +30,8 @@ find_package(Threads REQUIRED)
 # Add the external libraries
 add_subdirectory(third_party/entropy)
 add_subdirectory(third_party/tcdecrypt)
+add_subdirectory(third_party/vcdecrypt)
+add_subdirectory(third_party/gpgdecrypt)
 add_subdirectory(crypto_utils)
 
 # Define executable, referencing main.cpp

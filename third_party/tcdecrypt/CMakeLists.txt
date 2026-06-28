@@ -135,6 +135,15 @@ target_include_directories(tcdecrypt_core PUBLIC
     ${TC_ROOT}/Crypto
 )
 
+target_compile_definitions(tcdecrypt_core PRIVATE
+    hmac_sha512=tc_hmac_sha512
+    derive_key_sha512=tc_derive_key_sha512
+    hmac_whirlpool=tc_hmac_whirlpool
+    derive_key_whirlpool=tc_derive_key_whirlpool
+    get_pkcs5_iteration_count=tc_get_pkcs5_iteration_count
+    serpent_set_key=tc_serpent_set_key
+)
+
 # OS selection macros for the TrueCrypt sources.
 if(WIN32)
     target_compile_definitions(tcdecrypt_core PUBLIC TC_WINDOWS)

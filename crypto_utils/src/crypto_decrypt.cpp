@@ -1,5 +1,7 @@
 #include "crypto_utils/crypto_decrypt.h"
+#include "gpgdecrypt.h"
 #include "tcdecrypt.hpp"
+#include "vcdecrypt.hpp"
 #include <algorithm>
 #include <array>
 #include <cctype>
@@ -13,8 +15,8 @@ namespace fs = std::filesystem;
 
 // On MSVC the POSIX pipe functions are spelled with a leading underscore.
 #if defined(_MSC_VER)
-#	define popen  _popen
-#	define pclose _pclose
+#define popen _popen
+#define pclose _pclose
 #endif
 
 namespace {
@@ -125,79 +127,22 @@ int luks(const fs::path &file, const std::string &password) {
     }
 }
 
-int pgp(const fs::path &file, const std::string &password) {
+int pgp(const fs::path &file, const std::string &password,
+        const fs::path &out_decrypted) {
     const std::string stem_str = file.stem().string();
-    const fs::path mount_directory = fs::path("/mnt") / (stem_str + "_mount");
-    const fs::path decrypted_file =
-        file.parent_path() / (stem_str + "_decrypted");
-
-    if (!safe_create_directory(mount_directory)) {
-        return ERR_MOUNT;
-    }
-
-    // 1) Decrypt the container
-    const std::string command = "gpg --batch --yes --passphrase-fd 0 -o " +
-                                quote(decrypted_file) + " -d " + quote(file);
-    int result = execute_with_password(command, password);
-    if (result == -1) {
-        fs::remove(mount_directory);
+    const fs::path decrypted_file{out_decrypted /
+                                  fs::path(stem_str + "_decrypted")};
+    if (!pgpdecrypt::initialize()){
         return ERR_PIPE_OPEN;
     }
-    if (result != 0) {
-        fs::remove(mount_directory);
-        return ERR_DECRYPT;
-    }
+    if(!pgpdecrypt::decryptSymmetric(file.string(), decrypted_file.string(), password)) return ERR_DECRYPT;
 
-    // 2) Connect device, get the device link
-    const std::string loop_command = "losetup -fP " + quote(decrypted_file);
-    result = std::system(loop_command.c_str());
-    if (result != 0) {
-        fs::remove(decrypted_file);
-        fs::remove(mount_directory);
-        return ERR_LOOP_DEVICE;
-    }
-
-    // Get the path to loop device that was automatically selected
-    const std::string query_command =
-        "losetup -a | grep " + quote(decrypted_file) + " | cut -d: -f1";
-    FILE *pipe = popen(query_command.c_str(), "r");
-    if (!pipe) {
-        fs::remove(mount_directory);
-        fs::remove(decrypted_file);
-        return ERR_QUERY_PIPE;
-    }
-
-    std::array<char, 64> buffer;
-    std::string loop_device_path{};
-    while (std::fgets(buffer.data(), buffer.size(), pipe) != nullptr) {
-        loop_device_path += buffer.data();
-    }
-    pclose(pipe);
-
-    trim_trailing_whitespace(loop_device_path);
-
-    // 3) Mount device
-    const std::string mount_command =
-        "mount " + quote(loop_device_path) + " " + quote(mount_directory);
-    result = std::system(mount_command.c_str());
-
-    // 4) Print mount point
-    if (result == 0) {
-        std::cout << "The decrypted PGP container mounted at:\n"
-                  << mount_directory << '\n';
-        return SUCCESS;
-    } else {
-        const std::string detach_command =
-            "losetup -d " + quote(loop_device_path);
-        std::system(detach_command.c_str());
-        fs::remove(mount_directory);
-        fs::remove(decrypted_file);
-        return ERR_MOUNT;
-    }
+    std::cout << "File was decrypted in " << decrypted_file << "\n";
+    return SUCCESS;
 }
 
 int truecrypt(const fs::path &file, const std::string &password,
-              const fs::path &out_decrypted, const bool is_veracrypt) {
+              const fs::path &out_decrypted) {
     const std::string stem_str = file.stem().string();
     const fs::path decrypted_file(out_decrypted /
                                   fs::path(stem_str + "_decrypted"));
@@ -210,8 +155,25 @@ int truecrypt(const fs::path &file, const std::string &password,
     } catch (...) {
         return ERR_DECRYPT;
     }
-    std::cout << "is_veracrypt: " << is_veracrypt << "\n";
-    std::cout << "Some number: " << some_number << "\n";
+    std::cout << "File was decrypted in " << decrypted_file << "\n";
+
+    return SUCCESS;
+}
+
+int veracrypt(const fs::path &file, const std::string &password,
+              const fs::path &out_decrypted) {
+    const std::string stem_str = file.stem().string();
+    const fs::path decrypted_file(out_decrypted /
+                                  fs::path(stem_str + "_decrypted"));
+    vcdecrypt::OpenOptions opt;
+    opt.password = password;
+    opt.path = file.string();
+    uint64_t some_number{0};
+    try {
+        vcdecrypt::decryptToFile(opt, decrypted_file.string());
+    } catch (...) {
+        return ERR_DECRYPT;
+    }
     std::cout << "File was decrypted in " << decrypted_file << "\n";
 
     return SUCCESS;
