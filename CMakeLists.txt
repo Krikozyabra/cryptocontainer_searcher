@@ -7,6 +7,9 @@ set(CMAKE_CXX_EXTENSIONS ON)
 
 set(TCDECRYPT_BUILD_CLI OFF CACHE BOOL "" FORCE)
 
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+include(EncfsDecrypt)   # defines the encfs::decrypt imported target
+
 # Fetch Catch2 from GitHub
 include(FetchContent)
 FetchContent_Declare(
@@ -43,6 +46,13 @@ target_link_libraries(crypto_search PRIVATE
     Threads::Threads
     nlohmann_json::nlohmann_json
 )
+
+add_compile_definitions("ELPP_NO_DEFAULT_LOG_FILE")
+
+if(${ENCFS_RUST_LIB})
+    add_compile_definitions("ENCFS_RUST_LIB")
+    message(STATUS "ENCFS RUST LIB")
+endif()
 
 if(WIN32)
     message(STATUS "Configuring Windows build with full static linking...")

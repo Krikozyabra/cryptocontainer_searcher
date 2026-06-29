@@ -2,6 +2,7 @@
 #include "gpgdecrypt.h"
 #include "tcdecrypt.hpp"
 #include "vcdecrypt.hpp"
+#include "encfs_decrypt.h"
 #include <algorithm>
 #include <array>
 #include <cctype>
@@ -58,31 +59,20 @@ bool safe_create_directory(const fs::path &dir) {
 
 namespace crypto_decrypt {
 
-int encfs(const fs::path &file, const std::string &password) {
-    // 1) Get the directory
-    const fs::path enc_directory = file.parent_path();
-
-    // 2) Create mount directory using path concatenation operator
-    fs::path mount_directory = enc_directory;
-    mount_directory += "_mount";
-
-    if (!safe_create_directory(mount_directory)) {
-        return ERR_MOUNT;
-    }
-
-    // 3) Mount
-    const std::string command = "encfs --stdinpass " + quote(enc_directory) +
-                                " " + quote(mount_directory);
-    int result = execute_with_password(command, password);
-
-    if (result != 0) {
-        fs::remove(mount_directory);
+int encfs(const fs::path &file, const std::string &password, const fs::path &out_decrypted) {
+    const fs::path enc = file.parent_path();
+    const std::string out = (out_decrypted / (enc.filename().string() + "_decrypted"));
+    encfs_decrypt::DecryptOptions o;
+    o.rootDir = enc;
+    o.destDir = out;
+    o.password = password;
+    auto result = encfs_decrypt::decryptFolder(o);
+    if (!result.ok) {
         return ERR_DECRYPT;
     }
 
-    // 4) Print the mount link
-    std::cout << "\nThe decrypted encfs folder was mounted at:\n"
-              << mount_directory << '\n';
+    std::cout << "The decrypted encfs folder was decrypted at:\n"
+              << out << '\n';
     return SUCCESS;
 }
 

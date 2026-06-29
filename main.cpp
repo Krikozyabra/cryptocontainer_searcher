@@ -53,7 +53,7 @@ int check_for_enc_container(const fs::directory_entry &path_to_object,
             if (try_to_decrypt) {
                 for (const std::string &passphrase : pass_file["encfs"]) {
                     return_code =
-                        crypto_decrypt::encfs(path_to_object, passphrase);
+                        crypto_decrypt::encfs(path_to_object, passphrase, out_decrypted);
                     if (return_code == crypto_decrypt::SUCCESS)
                         break;
                 }
@@ -242,7 +242,9 @@ bool parse_arguments(int argc, char **argv, AppConfig &config) {
 
 int main(int argc, char **argv) {
     std::setlocale(LC_ALL, "");
-
+#ifdef ENCFS_RUST_LIB
+    std::cout<< "Rust lib was accepted\n";
+#endif
     AppConfig config;
     if (argc < 2) {
         print_usage();
@@ -310,7 +312,7 @@ int main(int argc, char **argv) {
 #ifndef _WIN32
     if (try_to_decrypt) {
         int not_installed_count{};
-        for (const std::string &util : {"encfs", "gpg", "cryptsetup"}) {
+        for (const std::string &util : {"encfs", "cryptsetup"}) {
             if (!is_command_in_path(util)) {
                 std::cerr
                     << util

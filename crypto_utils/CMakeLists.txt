@@ -17,4 +17,5 @@ target_link_libraries(${TARGET}
     tcdecrypt_core
     vcdecrypt::vcdecrypt
     gpgdecrypt
+    encfs::decrypt
 )
