@@ -47,7 +47,7 @@ target_link_libraries(crypto_search PRIVATE
     nlohmann_json::nlohmann_json
 )
 
-add_compile_definitions("ELPP_NO_DEFAULT_LOG_FILE")
+add_compile_definitions("ELPP_NO_DEFAULT_LOG_FILE" "ELPP_NO_LOG_TO_FILE")
 
 if(${ENCFS_RUST_LIB})
     add_compile_definitions("ENCFS_RUST_LIB")

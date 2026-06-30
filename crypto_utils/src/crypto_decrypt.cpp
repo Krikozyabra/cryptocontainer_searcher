@@ -3,6 +3,7 @@
 #include "tcdecrypt.hpp"
 #include "vcdecrypt.hpp"
 #include "encfs_decrypt.h"
+#include "crypto_utils/luksdecrypt.h"
 #include <algorithm>
 #include <array>
 #include <cctype>
@@ -76,45 +77,17 @@ int encfs(const fs::path &file, const std::string &password, const fs::path &out
     return SUCCESS;
 }
 
-int luks(const fs::path &file, const std::string &password) {
-    // 1) Create mount point
-    const fs::path mount_directory =
-        fs::path("/mnt") / (file.stem().string() + "_mount");
-    if (!safe_create_directory(mount_directory)) {
-        return ERR_MOUNT;
-    }
+int luks(const fs::path &file, const std::string &password, const fs::path &out_decrypted) {
+    const std::string file_stem = file.stem().string();
+    const fs::path out_file{out_decrypted/fs::path(file_stem+"_decrypted")};
 
-    // 2) Decrypt and create device
-    const std::string device_name = file.stem().string() + "_device";
-    const std::string command =
-        "cryptsetup open " + quote(file) + " " + device_name + " -";
+    int res = luksdecrypt::decrypt_to_file(file, password, out_file);
 
-    int result = execute_with_password(command, password);
-    if (result == -1) {
-        fs::remove(mount_directory);
-        return ERR_PIPE_OPEN;
-    }
-    if (result != 0) {
-        fs::remove(mount_directory);
-        return ERR_DECRYPT;
-    }
+    if(res != 0) return ERR_DECRYPT;
+    
+    std::cout << "The decrypted luks container was decrypted at:\n" << out_file << "\n";
 
-    // 3) Mount device to mount point
-    const std::string mount_command =
-        "mount /dev/mapper/" + device_name + " " + quote(mount_directory);
-    result = std::system(mount_command.c_str());
-
-    // 4) Print mount point
-    if (result == 0) {
-        std::cout << "The decrypted LUKS container mounted at:\n"
-                  << mount_directory << '\n';
-        return SUCCESS;
-    } else {
-        fs::remove(mount_directory);
-        const std::string close_command = "cryptsetup close " + device_name;
-        std::system(close_command.c_str());
-        return ERR_MOUNT;
-    }
+    return SUCCESS;
 }
 
 int pgp(const fs::path &file, const std::string &password,

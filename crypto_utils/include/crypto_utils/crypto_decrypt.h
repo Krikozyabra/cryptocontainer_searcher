@@ -14,10 +14,10 @@ constexpr int ERR_MOUNT = 3;
 constexpr int ERR_LOOP_DEVICE = 4;
 constexpr int ERR_QUERY_PIPE = 5;
 
-int encfs(const fs::path &, const std::string& password, const fs::path &);
+int encfs(const fs::path &, const std::string&, const fs::path &);
 int truecrypt(const fs::path &, const std::string&, const fs::path &);
 int veracrypt(const fs::path &, const std::string&, const fs::path &);
-int pgp(const fs::path &, const std::string& password, const fs::path &);
-int luks(const fs::path &, const std::string& password);
+int pgp(const fs::path &, const std::string&, const fs::path &);
+int luks(const fs::path &, const std::string&, const fs::path &);
 
 }

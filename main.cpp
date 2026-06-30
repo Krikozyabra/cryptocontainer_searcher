@@ -39,10 +39,11 @@ void print_usage() {
            "\t--out-decrypted - set the folder for decrypted containers\n";
 }
 
-void print_version() { std::cout << "0.0.4\n"; }
+void print_version() { std::cout << "0.1.0\n"; }
 
 int check_for_enc_container(const fs::directory_entry &path_to_object,
-                            const bool try_to_decrypt, const json &pass_file, const fs::path &out_decrypted) {
+                            const bool try_to_decrypt, const json &pass_file,
+                            const fs::path &out_decrypted) {
     std::error_code ec;
     int return_code{crypto_decrypt::SUCCESS};
 
@@ -52,8 +53,8 @@ int check_for_enc_container(const fs::directory_entry &path_to_object,
             std::cout << "This folder is encrypted with EncFS" << std::endl;
             if (try_to_decrypt) {
                 for (const std::string &passphrase : pass_file["encfs"]) {
-                    return_code =
-                        crypto_decrypt::encfs(path_to_object, passphrase, out_decrypted);
+                    return_code = crypto_decrypt::encfs(
+                        path_to_object, passphrase, out_decrypted);
                     if (return_code == crypto_decrypt::SUCCESS)
                         break;
                 }
@@ -66,8 +67,8 @@ int check_for_enc_container(const fs::directory_entry &path_to_object,
                       << std::endl;
             if (try_to_decrypt) {
                 for (const std::string &passphrase : pass_file["luks"]) {
-                    return_code =
-                        crypto_decrypt::luks(path_to_object, passphrase);
+                    return_code = crypto_decrypt::luks(
+                        path_to_object, passphrase, out_decrypted);
                     if (return_code == crypto_decrypt::SUCCESS)
                         break;
                 }
@@ -80,8 +81,8 @@ int check_for_enc_container(const fs::directory_entry &path_to_object,
                       << std::endl;
             if (try_to_decrypt) {
                 for (const std::string &passphrase : pass_file["pgp"]) {
-                    return_code =
-                        crypto_decrypt::pgp(path_to_object, passphrase, out_decrypted);
+                    return_code = crypto_decrypt::pgp(
+                        path_to_object, passphrase, out_decrypted);
                     if (return_code == crypto_decrypt::SUCCESS)
                         break;
                 }
@@ -95,16 +96,19 @@ int check_for_enc_container(const fs::directory_entry &path_to_object,
                       << std::endl;
             if (try_to_decrypt) {
                 for (const std::string &passphrase : pass_file["truecrypt"]) {
-                    return_code =
-                        crypto_decrypt::truecrypt(path_to_object, passphrase, out_decrypted);
+                    return_code = crypto_decrypt::truecrypt(
+                        path_to_object, passphrase, out_decrypted);
                     if (return_code == crypto_decrypt::SUCCESS)
                         break;
                 }
-                for (const std::string &passphrase : pass_file["veracrypt"]) {
-                    return_code = crypto_decrypt::veracrypt(path_to_object,
-                                                            passphrase, out_decrypted);
-                    if (return_code == crypto_decrypt::SUCCESS)
-                        break;
+                if (return_code != crypto_decrypt::SUCCESS) {
+                    for (const std::string &passphrase :
+                         pass_file["veracrypt"]) {
+                        return_code = crypto_decrypt::veracrypt(
+                            path_to_object, passphrase, out_decrypted);
+                        if (return_code == crypto_decrypt::SUCCESS)
+                            break;
+                    }
                 }
             }
             return return_code;
@@ -120,7 +124,8 @@ int check_for_enc_container(const fs::directory_entry &path_to_object,
 }
 
 void folder_traveler(const fs::path &searching_folder, const json &pass_file,
-                     const bool is_recursive, const bool try_to_decrypt, const fs::path &out_decrypted) {
+                     const bool is_recursive, const bool try_to_decrypt,
+                     const fs::path &out_decrypted) {
     std::error_code ec;
     auto dir_iter = fs::directory_iterator(searching_folder, ec);
     if (ec) {
@@ -137,8 +142,8 @@ void folder_traveler(const fs::path &searching_folder, const json &pass_file,
         }
 
         // Run detection logic
-        int return_result =
-            check_for_enc_container(entry, try_to_decrypt, pass_file, out_decrypted);
+        int return_result = check_for_enc_container(entry, try_to_decrypt,
+                                                    pass_file, out_decrypted);
         switch (return_result) {
         case crypto_decrypt::ERR_DECRYPT:
             std::cerr << "No password found for this container" << std::endl;
@@ -225,8 +230,8 @@ bool parse_arguments(int argc, char **argv, AppConfig &config) {
                 std::cerr << "Error: --decrypt requires an argument\n";
                 return false;
             }
-        } else if (std::strcmp(argv[i], "--out-decrypted") == 0){
-            if (i+1 < argc){
+        } else if (std::strcmp(argv[i], "--out-decrypted") == 0) {
+            if (i + 1 < argc) {
                 config.out_decrypted = argv[++i];
             } else {
                 std::cerr << "Error: --out-decrypted requires an argument\n";
@@ -243,7 +248,7 @@ bool parse_arguments(int argc, char **argv, AppConfig &config) {
 int main(int argc, char **argv) {
     std::setlocale(LC_ALL, "");
 #ifdef ENCFS_RUST_LIB
-    std::cout<< "Rust lib was accepted\n";
+    std::cout << "Rust lib was accepted\n";
 #endif
     AppConfig config;
     if (argc < 2) {
@@ -274,8 +279,9 @@ int main(int argc, char **argv) {
         return EXIT_FAILURE;
     }
 
-    if (!fs::is_directory(config.out_decrypted, ec)){
-        std::cerr << "Errot: the argument for --out-decrypted '" << config.out_decrypted << "' is not a directory.\n";
+    if (!fs::is_directory(config.out_decrypted, ec)) {
+        std::cerr << "Errot: the argument for --out-decrypted '"
+                  << config.out_decrypted << "' is not a directory.\n";
         return EXIT_FAILURE;
     }
 
@@ -308,7 +314,7 @@ int main(int argc, char **argv) {
     }
 
     const bool try_to_decrypt = !pass_file.empty();
-    
+
 #ifndef _WIN32
     if (try_to_decrypt) {
         int not_installed_count{};
@@ -325,7 +331,6 @@ int main(int argc, char **argv) {
         }
     }
 #endif
-    
 
     try {
         folder_traveler(config.searching_folder, pass_file, config.is_recursive,
