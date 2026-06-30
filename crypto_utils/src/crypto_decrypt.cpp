@@ -1,9 +1,11 @@
 #include "crypto_utils/crypto_decrypt.h"
+#include "encfs_decrypt.h"
 #include "gpgdecrypt.h"
 #include "tcdecrypt.hpp"
 #include "vcdecrypt.hpp"
-#include "encfs_decrypt.h"
+#ifdef SUPPORT_LUKS
 #include "crypto_utils/luksdecrypt.h"
+#endif
 #include <algorithm>
 #include <array>
 #include <cctype>
@@ -60,9 +62,11 @@ bool safe_create_directory(const fs::path &dir) {
 
 namespace crypto_decrypt {
 
-int encfs(const fs::path &file, const std::string &password, const fs::path &out_decrypted) {
+int encfs(const fs::path &file, const std::string &password,
+          const fs::path &out_decrypted) {
     const fs::path enc = file.parent_path();
-    const std::string out = (out_decrypted / (enc.filename().string() + "_decrypted"));
+    const std::string out =
+        (out_decrypted / (enc.filename().string() + "_decrypted"));
     encfs_decrypt::DecryptOptions o;
     o.rootDir = enc;
     o.destDir = out;
@@ -77,17 +81,24 @@ int encfs(const fs::path &file, const std::string &password, const fs::path &out
     return SUCCESS;
 }
 
-int luks(const fs::path &file, const std::string &password, const fs::path &out_decrypted) {
+int luks(const fs::path &file, const std::string &password,
+         const fs::path &out_decrypted) {
     const std::string file_stem = file.stem().string();
-    const fs::path out_file{out_decrypted/fs::path(file_stem+"_decrypted")};
-
+    const fs::path out_file{out_decrypted / fs::path(file_stem + "_decrypted")};
+#ifdef SUPPORT_LUKS
     int res = luksdecrypt::decrypt_to_file(file, password, out_file);
 
-    if(res != 0) return ERR_DECRYPT;
-    
-    std::cout << "The decrypted luks container was decrypted at:\n" << out_file << "\n";
+    if (res != 0)
+        return ERR_DECRYPT;
+
+    std::cout << "The decrypted luks container was decrypted at:\n"
+              << out_file << "\n";
 
     return SUCCESS;
+#else
+    std::cerr << "LUKS decryption is not supported on this operating system.\n";
+    return -1;
+#endif
 }
 
 int pgp(const fs::path &file, const std::string &password,
@@ -95,10 +106,12 @@ int pgp(const fs::path &file, const std::string &password,
     const std::string stem_str = file.stem().string();
     const fs::path decrypted_file{out_decrypted /
                                   fs::path(stem_str + "_decrypted")};
-    if (!pgpdecrypt::initialize()){
+    if (!pgpdecrypt::initialize()) {
         return ERR_PIPE_OPEN;
     }
-    if(!pgpdecrypt::decryptSymmetric(file.string(), decrypted_file.string(), password)) return ERR_DECRYPT;
+    if (!pgpdecrypt::decryptSymmetric(file.string(), decrypted_file.string(),
+                                      password))
+        return ERR_DECRYPT;
 
     std::cout << "File was decrypted in " << decrypted_file << "\n";
     return SUCCESS;

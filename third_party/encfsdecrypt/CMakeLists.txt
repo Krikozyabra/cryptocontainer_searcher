@@ -72,6 +72,11 @@ target_compile_definitions(encfs_decrypt PUBLIC
   _FILE_OFFSET_BITS=64   # 64-bit file offsets
 )
 
+target_compile_definitions(encfs_decrypt PRIVATE
+  ELPP_THREAD_SAFE
+  ELPP_NO_DEFAULT_LOG_FILE   # don't open/create a default log file
+  ELPP_DISABLE_LOG_FILE_FROM_ARG
+)
 # --- include directories --------------------------------------------------
 # PUBLIC: the consumer needs the public header dir.
 target_include_directories(encfs_decrypt PUBLIC

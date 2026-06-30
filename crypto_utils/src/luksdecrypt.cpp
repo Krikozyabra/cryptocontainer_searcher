@@ -35,7 +35,7 @@ int decrypt_to_file(const fs::path &encrypted_file, const std::string &password,
     // We open it read-only for safety.
     int act_status = crypt_activate_by_passphrase(
         cd, mapping_device.c_str(), CRYPT_ANY_SLOT, password.c_str(),
-        strlen(password.c_str()), CRYPT_ACTIVATE_READONLY);
+        password.size(), CRYPT_ACTIVATE_READONLY);
 
     if (act_status < 0) {
         std::cerr
@@ -66,6 +66,9 @@ int decrypt_to_file(const fs::path &encrypted_file, const std::string &password,
     if (src.gcount() > 0) {
         dest.write(buffer.data(), src.gcount());
     }
+    
+    src.close();
+    dest.close();
 
     if (crypt_deactivate(cd, mapping_device.c_str()) < 0) {
         std::cerr << "Warning: Failed to deactivate mapping: " << mapping_device
