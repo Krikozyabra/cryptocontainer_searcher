@@ -1,8 +1,5 @@
 set(TARGET crypto_utils)
 
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(CRYPTSETUP REQUIRED IMPORTED_TARGET libcryptsetup)
-
 set(SRC_LIST
     src/crypto_search.cpp
     src/crypto_decrypt.cpp

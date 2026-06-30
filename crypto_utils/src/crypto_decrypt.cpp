@@ -23,11 +23,11 @@ namespace crypto_decrypt {
 int encfs(const fs::path &file, const std::string &password,
           const fs::path &out_decrypted) {
     const fs::path enc = file.parent_path();
-    const std::string out =
+    const fs::path out =
         (out_decrypted / (enc.filename().string() + "_decrypted"));
     encfs_decrypt::DecryptOptions o;
-    o.rootDir = enc;
-    o.destDir = out;
+    o.rootDir = enc.string();
+    o.destDir = out.string();
     o.password = password;
     auto result = encfs_decrypt::decryptFolder(o);
     if (!result.ok) {

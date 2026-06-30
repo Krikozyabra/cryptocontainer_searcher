@@ -63,7 +63,7 @@ typedef int gid_t;
 // ---- pthread mutex shim (used by SSL_Cipher.cpp / MemoryPool.cpp) --------
 // Backed by a Win32 critical section. Only the mutex subset encfs uses.
 #include <windows.h>  // lowercase: portable across MSVC and MinGW
-
+#if defined(_MSC_VER)
 typedef CRITICAL_SECTION pthread_mutex_t;
 #define PTHREAD_MUTEX_INITIALIZER \
   {}
@@ -85,6 +85,9 @@ static __inline int pthread_mutex_unlock(pthread_mutex_t *m) {
   LeaveCriticalSection(m);
   return 0;
 }
+#else
+#include <pthread.h>
+#endif
 
 // ---- mlock / munlock shim (SSL_Cipher.cpp pins key memory) ---------------
 // Best-effort: VirtualLock if available, otherwise a no-op. Decryption is

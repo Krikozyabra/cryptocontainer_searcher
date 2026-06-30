@@ -28,7 +28,9 @@
 #include <openssl/rand.h>
 #include <pthread.h>
 #include <string>
+#if !defined(_WIN32)
 #include <sys/mman.h>
+#endif
 #include <sys/time.h>
 
 #include "Cipher.h"

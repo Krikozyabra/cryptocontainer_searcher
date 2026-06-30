@@ -69,7 +69,9 @@ set(VC_PLATFORM_SRC
 # VeraCrypt's own pthread implementations; on Windows we provide our own native
 # Win32 implementations (vcdecrypt does not ship Windows versions of these).
 if(WIN32)
-    set(VC_THREAD_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/platform_win32.cpp")
+    set(VC_THREAD_SRC
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/platform_win32.cpp"
+        "${VC_SRC}/Platform/Unix/SystemException.cpp")
 else()
     set(VC_THREAD_SRC
         "${VC_SRC}/Platform/Unix/Mutex.cpp"
