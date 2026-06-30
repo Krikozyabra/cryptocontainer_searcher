@@ -1,6 +1,5 @@
 #include "crypto_utils/luksdecrypt.h"
 
-#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <iostream>

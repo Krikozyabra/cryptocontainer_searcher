@@ -23,8 +23,6 @@ bool read_header(const fs::path &path, std::array<char, N> &buffer) {
 namespace crypto_search {
 
 bool encfs_file(const fs::path &file) {
-    // Direct path comparison avoids converting to std::string and heap
-    // allocation
     const auto filename = file.filename();
     return filename == ".encfs6" || filename == ".encfs6.xml";
 }
@@ -63,7 +61,7 @@ bool veracrypt_truecrypt_file(const fs::path &file) {
 
     // Only instantiate the entropy checker if the file fits the criteria
     entropy::ShannonEncryptionChecker checker;
-    return checker.get_file_entropy(file.string()) > 7.9;
+    return checker.get_file_entropy(file.string()) > 7.99;
 }
 
 } // namespace crypto_search

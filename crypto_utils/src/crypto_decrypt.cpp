@@ -6,11 +6,6 @@
 #ifdef SUPPORT_LUKS
 #include "crypto_utils/luksdecrypt.h"
 #endif
-#include <algorithm>
-#include <array>
-#include <cctype>
-#include <cstdio>
-#include <cstdlib>
 #include <filesystem>
 #include <iostream>
 #include <string>
@@ -22,43 +17,6 @@ namespace fs = std::filesystem;
 #define popen _popen
 #define pclose _pclose
 #endif
-
-namespace {
-// Helper: trim trailing whitespace from system command output
-void trim_trailing_whitespace(std::string &s) {
-    s.erase(std::find_if(s.rbegin(), s.rend(),
-                         [](unsigned char ch) { return !std::isspace(ch); })
-                .base(),
-            s.end());
-}
-
-// Helper: Wrap path in quotes to handle spaces in folder/file names safely
-std::string quote(const fs::path &path) { return "\"" + path.string() + "\""; }
-
-// Helper: Deduplicates the pipe open/write password pattern
-int execute_with_password(const std::string &command,
-                          const std::string &password) {
-    FILE *pipe = popen(command.c_str(), "w");
-    if (!pipe) {
-        return -1;
-    }
-    std::fputs(password.c_str(), pipe);
-    std::fputs("\n", pipe);
-    return pclose(pipe);
-}
-
-// Helper: Safely creates directory, reporting failure via return status
-bool safe_create_directory(const fs::path &dir) {
-    std::error_code ec;
-    fs::create_directory(dir, ec);
-    if (ec) {
-        std::cerr << "Error creating directory " << dir << ": " << ec.message()
-                  << '\n';
-        return false;
-    }
-    return true;
-}
-} // namespace
 
 namespace crypto_decrypt {
 
