@@ -12,6 +12,7 @@ set(LINK_LIBS
     vcdecrypt::vcdecrypt
     gpgdecrypt
     encfs::decrypt
+    Tyfe
 )
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")

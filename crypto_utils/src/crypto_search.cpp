@@ -1,5 +1,6 @@
 #include "crypto_utils/crypto_search.h"
 #include "entropy/shannon_entropy.h"
+#include "Tyfe/Tyfe.hpp"
 #include <array>
 #include <cstring>
 #include <filesystem>
@@ -44,6 +45,39 @@ bool is_valid_config(const fs::path &path) {
     }
     return false;
 }
+
+double get_file_chi_square(const fs::path &file) {
+    std::ifstream ifs(file, std::ios::binary);
+    if (!ifs) {
+        return -1.0; // Error indicator
+    }
+
+    std::vector<uint64_t> counts(256, 0);
+    uint64_t total_bytes = 0;
+
+    constexpr size_t buffer_size = 65536;
+    std::vector<char> buffer(buffer_size);
+
+    while (ifs.read(buffer.data(), buffer_size) || ifs.gcount() > 0) {
+        std::streamsize bytes_read = ifs.gcount();
+        for (std::streamsize i = 0; i < bytes_read; ++i) {
+            unsigned char byte_val = static_cast<unsigned char>(buffer[i]);
+            counts[byte_val]++;
+        }
+        total_bytes += bytes_read;
+    }
+
+    if (total_bytes == 0) {
+        return -1.0;
+    }
+
+    double sum_sq = 0.0;
+    for (int i = 0; i < 256; ++i) {
+        sum_sq += static_cast<double>(counts[i]) * counts[i];
+    }
+
+    return (256.0 / total_bytes) * sum_sq - total_bytes;
+}
 } // namespace
 
 namespace crypto_search {
@@ -79,15 +113,19 @@ bool pgp_file(const fs::path &file) {
 bool veracrypt_truecrypt_file(const fs::path &file) {
     std::error_code ec;
     const uintmax_t fsize = fs::file_size(file, ec);
-
-    // Gracefully handle restricted/unreadable file errors instead of throwing
-    if (ec || fsize == 0 || fsize % 512 != 0) {
+    Tyfe check_magic;
+    if (check_magic.check(file.string()) != TYFES::NOTHING) 
         return false;
-    }
+    if (ec || fsize == 0 || fsize % 512 != 0)
+        return false;
 
-    // Only instantiate the entropy checker if the file fits the criteria
     entropy::ShannonEncryptionChecker checker;
-    return checker.get_file_entropy(file.string()) > 7.99;
+    if (checker.get_file_entropy(file.string()) <= 7.99) return false;
+
+    double chi_square = get_file_chi_square(file);
+    return (chi_square >= 200 && chi_square <= 310); // bitween 1 and 99% of critical values of 256 degrees
+    
+
 }
 
 } // namespace crypto_search
