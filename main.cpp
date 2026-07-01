@@ -279,7 +279,7 @@ int main(int argc, char **argv) {
         return EXIT_FAILURE;
     }
 
-    if (!fs::is_directory(config.out_decrypted, ec)) {
+    if (!config.out_decrypted.empty()  && !fs::is_directory(config.out_decrypted, ec)) {
         std::cerr << "Errot: the argument for --out-decrypted '"
                   << config.out_decrypted << "' is not a directory.\n";
         return EXIT_FAILURE;

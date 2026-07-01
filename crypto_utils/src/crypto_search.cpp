@@ -5,6 +5,8 @@
 #include <filesystem>
 #include <fstream>
 #include <system_error>
+#include <tinyxml2.h>
+#include <iostream>
 
 namespace fs = std::filesystem;
 
@@ -18,13 +20,37 @@ bool read_header(const fs::path &path, std::array<char, N> &buffer) {
     }
     return static_cast<bool>(byte_stream.read(buffer.data(), N));
 }
+
+bool is_valid_config(const fs::path &path) {
+    tinyxml2::XMLDocument cfg;
+    if (auto result = cfg.LoadFile(path.string().c_str());
+        result != tinyxml2::XML_SUCCESS) {
+        return false;
+    }
+
+    auto *root = cfg.FirstChildElement("boost_serialization");
+    if (!root) {
+        return false;
+    }
+
+    if (auto *cfgElement = root->FirstChildElement("cfg");
+        cfgElement != nullptr) {
+        if (auto *cipherElement = cfgElement->FirstChildElement("cipherAlg");
+            cipherElement != nullptr) {
+            if (!cipherElement->NoChildren()) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
 } // namespace
 
 namespace crypto_search {
 
 bool encfs_file(const fs::path &file) {
     const auto filename = file.filename();
-    return filename == ".encfs6" || filename == ".encfs6.xml";
+    return (filename == ".encfs6" || filename == ".encfs6.xml") && is_valid_config(file);
 }
 
 bool luks_file(const fs::path &file) {
