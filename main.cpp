@@ -315,23 +315,6 @@ int main(int argc, char **argv) {
 
     const bool try_to_decrypt = !pass_file.empty();
 
-#ifndef _WIN32
-    if (try_to_decrypt) {
-        int not_installed_count{};
-        for (const std::string &util : {"encfs", "cryptsetup"}) {
-            if (!is_command_in_path(util)) {
-                std::cerr
-                    << util
-                    << " is not installed, please install and try again\n";
-                not_installed_count++;
-            }
-        }
-        if (not_installed_count > 0) {
-            return EXIT_FAILURE;
-        }
-    }
-#endif
-
     try {
         folder_traveler(config.searching_folder, pass_file, config.is_recursive,
                         try_to_decrypt, config.out_decrypted);
