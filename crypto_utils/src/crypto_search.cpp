@@ -13,13 +13,13 @@ namespace fs = std::filesystem;
 
 namespace {
 // Helper: Safely reads a fixed-size header into a std::array
-template <size_t N>
-bool read_header(const fs::path &path, std::array<char, N> &buffer) {
+template <typename T, size_t N>
+bool read_header(const fs::path &path, std::array<T, N> &buffer) {
     std::ifstream byte_stream(path, std::ios::binary);
     if (!byte_stream) {
         return false;
     }
-    return static_cast<bool>(byte_stream.read(buffer.data(), N));
+    return static_cast<bool>(byte_stream.read(reinterpret_cast<char*>(buffer.data()), N*sizeof(T)));
 }
 
 bool is_valid_config(const fs::path &path) {
@@ -88,9 +88,11 @@ bool encfs_file(const fs::path &file) {
 }
 
 bool luks_file(const fs::path &file) {
-    std::array<char, 4> magic;
+    std::array<uint8_t, 8> magic;
+    std::array<uint8_t, 8> luks1 = {0x4c, 0x55, 0x4b, 0x53, 0xba, 0xbe, 0x00, 0x01};
+    std::array<uint8_t, 8> luks2 = {0x4c, 0x55, 0x4b, 0x53, 0xba, 0xbe, 0x00, 0x02};
     if (read_header(file, magic)) {
-        return std::memcmp(magic.data(), "LUKS", 4) == 0;
+        return (magic == luks1) || (magic == luks2);
     }
     return false;
 }
