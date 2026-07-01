@@ -19,13 +19,11 @@ int decrypt_to_file(const fs::path &encrypted_file, const std::string &password,
 
     // 1. Initialize device context
     if (crypt_init(&cd, encrypted_file.c_str()) < 0) {
-        std::cerr << "Failed to initialize crypt device context.\n";
         return 1;
     }
 
     // 2. Load the LUKS header
     if (crypt_load(cd, CRYPT_LUKS, nullptr) < 0) {
-        std::cerr << "Failed to load LUKS header.\n";
         crypt_free(cd);
         return 1;
     }
@@ -37,23 +35,17 @@ int decrypt_to_file(const fs::path &encrypted_file, const std::string &password,
         password.size(), CRYPT_ACTIVATE_READONLY);
 
     if (act_status < 0) {
-        std::cerr
-            << "Activation failed. Incorrect passphrase or error occurred.\n";
         crypt_free(cd);
         return 1;
     }
 
     std::ifstream src{mapped_path, std::ios::binary};
     if (!src) {
-        std::cerr << "Error: Failed to open mapped device for reading: "
-                  << mapped_path << "\n";
         return 1;
     }
 
     std::ofstream dest(decrypted_file, std::ios::binary);
     if (!dest) {
-        std::cerr << "Error: Failed to open output file for writing: "
-                  << decrypted_file << "\n";
         return 1;
     }
 

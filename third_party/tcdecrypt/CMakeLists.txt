@@ -135,13 +135,81 @@ target_include_directories(tcdecrypt_core PUBLIC
     ${TC_ROOT}/Crypto
 )
 
+# tcdecrypt and vcdecrypt both vendor TrueCrypt/VeraCrypt's C crypto sources,
+# which export the SAME plain-C global symbols (twofish_set_key, aes_encrypt,
+# sha512, ...). When both static libraries are linked into one binary the linker
+# keeps only one definition per name and silently cross-wires the calls. Because
+# the two copies use DIFFERENT struct layouts (e.g. TwofishInstance), a call from
+# vcdecrypt that resolves to tcdecrypt's twofish_set_key writes past the end of
+# the key schedule and crashes (SEGV in twofish_set_key). Prefix every clashing
+# C symbol in THIS library with `tc_` so the two crypto cores stay separate.
 target_compile_definitions(tcdecrypt_core PRIVATE
+    # already-renamed PKCS5 / serpent entry points
     hmac_sha512=tc_hmac_sha512
     derive_key_sha512=tc_derive_key_sha512
     hmac_whirlpool=tc_hmac_whirlpool
     derive_key_whirlpool=tc_derive_key_whirlpool
     get_pkcs5_iteration_count=tc_get_pkcs5_iteration_count
     serpent_set_key=tc_serpent_set_key
+    # Twofish (the one that crashed)
+    twofish_set_key=tc_twofish_set_key
+    twofish_encrypt=tc_twofish_encrypt
+    twofish_decrypt=tc_twofish_decrypt
+    # AES
+    aes_init=tc_aes_init
+    aes_encrypt=tc_aes_encrypt
+    aes_decrypt=tc_aes_decrypt
+    aes_encrypt_key256=tc_aes_encrypt_key256
+    aes_decrypt_key256=tc_aes_decrypt_key256
+    # SHA-256 / SHA-512
+    sha256=tc_sha256
+    sha256_begin=tc_sha256_begin
+    sha256_end=tc_sha256_end
+    sha256_hash=tc_sha256_hash
+    sha512=tc_sha512
+    sha512_begin=tc_sha512_begin
+    sha512_end=tc_sha512_end
+    sha512_hash=tc_sha512_hash
+    # Whirlpool
+    WHIRLPOOL_init=tc_WHIRLPOOL_init
+    WHIRLPOOL_add=tc_WHIRLPOOL_add
+    WHIRLPOOL_finalize=tc_WHIRLPOOL_finalize
+    # CRC32
+    GetCrc32=tc_GetCrc32
+    crc32int=tc_crc32int
+    crc32_selftests=tc_crc32_selftests
+    # GF(2^128) multiply helpers (GfMul.c)
+    Gf128MulBy64Tab=tc_Gf128MulBy64Tab
+    Gf128Tab64Init=tc_Gf128Tab64Init
+    GfMul128=tc_GfMul128
+    GfMul128Tab=tc_GfMul128Tab
+    GfMulSelfTest=tc_GfMulSelfTest
+    MirrorBits128=tc_MirrorBits128
+    MirrorBits64=tc_MirrorBits64
+    MirrorBytes16=tc_MirrorBytes16
+    MirrorBytes32=tc_MirrorBytes32
+    MirrorBytes64=tc_MirrorBytes64
+    mul_x=tc_mul_x
+    mul_x64=tc_mul_x64
+    mul_lex8=tc_mul_lex8
+    mul_lex8_64=tc_mul_lex8_64
+    mul_bex8=tc_mul_bex8
+    mul_bex8_64=tc_mul_bex8_64
+    bsw_32=tc_bsw_32
+    compile_4k_table64=tc_compile_4k_table64
+    compile_8k_table=tc_compile_8k_table
+    move_block_aligned=tc_move_block_aligned
+    move_block_aligned64=tc_move_block_aligned64
+    xor_block_aligned=tc_xor_block_aligned
+    xor_block_aligned64=tc_xor_block_aligned64
+    # CRC table + AES lookup-table generators/data (Aestab.c)
+    crc_32_tab=tc_crc_32_tab
+    t_fl=tc_t_fl
+    t_fn=tc_t_fn
+    t_il=tc_t_il
+    t_im=tc_t_im
+    t_in=tc_t_in
+    t_rc=tc_t_rc
 )
 
 # OS selection macros for the TrueCrypt sources.

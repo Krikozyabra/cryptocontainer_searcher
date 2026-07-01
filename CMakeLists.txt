@@ -7,6 +7,8 @@ set(CMAKE_CXX_EXTENSIONS ON)
 
 set(TCDECRYPT_BUILD_CLI OFF CACHE BOOL "" FORCE)
 
+cmake_policy(SET CMP0135 NEW)
+
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(EncfsDecrypt)   # defines the encfs::decrypt imported target
 
