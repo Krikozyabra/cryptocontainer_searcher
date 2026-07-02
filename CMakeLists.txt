@@ -93,8 +93,7 @@ add_executable(unit_tests
 # Link the test executable with Catch2 and other dependencies
 target_link_libraries(unit_tests PRIVATE 
     Catch2::Catch2WithMain
-    crypto_utils
-    Threads::Threads
+    ${BUILD_LIBRARIES}
 )
 
 # Register the test executable with CTest

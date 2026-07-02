@@ -1,13 +1,14 @@
 #include "crypto_utils/crypto_search.h"
-#include "entropy/shannon_entropy.h"
 #include "Tyfe/Tyfe.hpp"
+#include "entropy/shannon_entropy.h"
 #include <array>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <iostream>
+#include <spdlog/spdlog.h>
 #include <system_error>
 #include <tinyxml2.h>
-#include <iostream>
 
 namespace fs = std::filesystem;
 
@@ -19,18 +20,28 @@ bool read_header(const fs::path &path, std::array<T, N> &buffer) {
     if (!byte_stream) {
         return false;
     }
-    return static_cast<bool>(byte_stream.read(reinterpret_cast<char*>(buffer.data()), N*sizeof(T)));
+    return static_cast<bool>(byte_stream.read(
+        reinterpret_cast<char *>(buffer.data()), N * sizeof(T)));
 }
 
 bool is_valid_config(const fs::path &path) {
+#ifdef LOG_ENABLED
+    spdlog::info("Started checking EncFS config validation");
+#endif
     tinyxml2::XMLDocument cfg;
     if (auto result = cfg.LoadFile(path.string().c_str());
         result != tinyxml2::XML_SUCCESS) {
+#ifdef LOG_ENABLED
+        spdlog::warn("EncFS config was not parse successefully");
+#endif
         return false;
     }
 
     auto *root = cfg.FirstChildElement("boost_serialization");
     if (!root) {
+#ifdef LOG_ENABLED
+        spdlog::warn("No correct root in config");
+#endif
         return false;
     }
 
@@ -41,12 +52,30 @@ bool is_valid_config(const fs::path &path) {
             if (!cipherElement->NoChildren()) {
                 return true;
             }
+#ifdef LOG_ENABLED
+            else {
+                spdlog::warn("Child 'cipherAlg' does not have childs");
+            }
+#endif
         }
+#ifdef LOG_ENABLED
+        else {
+            spdlog::warn("Child 'cipherAlg' was not found");
+        }
+#endif
     }
+#ifdef LOG_ENABLED
+    else {
+        spdlog::warn("Child 'cfg' was not found");
+    }
+#endif
     return false;
 }
 
 double get_file_chi_square(const fs::path &file) {
+#ifdef LOG_ENABLED
+    spdlog::info("Chi square calculation started");
+#endif
     std::ifstream ifs(file, std::ios::binary);
     if (!ifs) {
         return -1.0; // Error indicator
@@ -83,14 +112,23 @@ double get_file_chi_square(const fs::path &file) {
 namespace crypto_search {
 
 bool encfs_file(const fs::path &file) {
+    #ifdef LOG_ENABLED
+       spdlog::info("EncFS detection started for " + file.string());
+    #endif
     const auto filename = file.filename();
-    return (filename == ".encfs6" || filename == ".encfs6.xml") && is_valid_config(file);
+    return (filename == ".encfs6" || filename == ".encfs6.xml") &&
+           is_valid_config(file);
 }
 
 bool luks_file(const fs::path &file) {
+    #ifdef LOG_ENABLED
+       spdlog::info("LUKS detection started for " + file.string());
+    #endif
     std::array<uint8_t, 8> magic;
-    std::array<uint8_t, 8> luks1 = {0x4c, 0x55, 0x4b, 0x53, 0xba, 0xbe, 0x00, 0x01};
-    std::array<uint8_t, 8> luks2 = {0x4c, 0x55, 0x4b, 0x53, 0xba, 0xbe, 0x00, 0x02};
+    std::array<uint8_t, 8> luks1 = {0x4c, 0x55, 0x4b, 0x53,
+                                    0xba, 0xbe, 0x00, 0x01};
+    std::array<uint8_t, 8> luks2 = {0x4c, 0x55, 0x4b, 0x53,
+                                    0xba, 0xbe, 0x00, 0x02};
     if (read_header(file, magic)) {
         return (magic == luks1) || (magic == luks2);
     }
@@ -98,6 +136,9 @@ bool luks_file(const fs::path &file) {
 }
 
 bool pgp_file(const fs::path &file) {
+    #ifdef LOG_ENABLED
+       spdlog::info("PGP detection started for " + file.string());
+    #endif
     // Cast hex constants to char to avoid compilation warnings on signed-char
     // systems
     constexpr std::array<char, 6> pgp_magic{
@@ -113,21 +154,25 @@ bool pgp_file(const fs::path &file) {
 }
 
 bool veracrypt_truecrypt_file(const fs::path &file) {
+    #ifdef LOG_ENABLED
+       spdlog::info("True/Vera Crypt detection started for " + file.string());
+    #endif
     std::error_code ec;
     const uintmax_t fsize = fs::file_size(file, ec);
     Tyfe check_magic;
-    if (check_magic.check(file.string()) != TYFES::NOTHING) 
+    if (check_magic.check(file.string()) != TYFES::NOTHING)
         return false;
     if (ec || fsize == 0 || fsize % 512 != 0)
         return false;
 
     entropy::ShannonEncryptionChecker checker;
-    if (checker.get_file_entropy(file.string()) <= 7.99) return false;
+    if (checker.get_file_entropy(file.string()) <= 7.99)
+        return false;
 
     double chi_square = get_file_chi_square(file);
-    return (chi_square >= 200 && chi_square <= 310); // bitween 1 and 99% of critical values of 256 degrees
-    
-
+    return (chi_square >= 200 &&
+            chi_square <=
+                310); // bitween 1 and 99% of critical values of 256 degrees
 }
 
 } // namespace crypto_search
