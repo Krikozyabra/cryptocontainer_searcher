@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.24)
 project(find_cryptocontainers LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -31,6 +31,11 @@ FetchContent_MakeAvailable(Catch2 json)
 
 # Find dependencies required by the entropy library
 find_package(Threads REQUIRED)
+if(LOG)
+    message(STATUS "Configuring build with log turn on")
+    add_compile_definitions("LOG_ENABLED")
+    find_package(spdlog REQUIRED)
+endif()
 
 # Add the external libraries
 add_subdirectory(third_party/entropy)
@@ -44,21 +49,33 @@ add_subdirectory(crypto_utils)
 add_executable(crypto_search main.cpp)
 
 # Link everything together
-target_link_libraries(crypto_search PRIVATE 
+set(BUILD_LIBRARIES
     crypto_utils
     Threads::Threads
     nlohmann_json::nlohmann_json
 )
 
-if(${ENCFS_RUST_LIB})
-    add_compile_definitions("ENCFS_RUST_LIB")
-    message(STATUS "ENCFS RUST LIB")
+if(LOG)
+    list(APPEND BUILD_LIBRARIES
+        spdlog::spdlog
+    )
 endif()
+
+target_link_libraries(crypto_search PRIVATE
+    ${BUILD_LIBRARIES}
+)
 
 if(WIN32)
     message(STATUS "Configuring Windows build with full static linking...")
-    target_link_options(crypto_search PRIVATE -static -static-libgcc -static-libstdc++)
-
+    if(MSVC)
+        # Portably configure static linking for MSVC
+        set_target_properties(crypto_search PROPERTIES
+            MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
+        )
+    else()
+        # For MinGW or other GCC-like compilers on Windows
+        target_link_options(crypto_search PRIVATE -static -static-libgcc -static-libstdc++)
+    endif()
 elseif(UNIX AND NOT APPLE)
     message(STATUS "Configuring Linux build with semi-static linking...")
     target_link_options(crypto_search PRIVATE -static-libgcc -static-libstdc++)

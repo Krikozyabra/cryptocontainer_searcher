@@ -3,6 +3,7 @@ set(TARGET crypto_utils)
 set(SRC_LIST
     src/crypto_search.cpp
     src/crypto_decrypt.cpp
+    src/luksdecrypt.cpp
 )
 
 set(LINK_LIBS

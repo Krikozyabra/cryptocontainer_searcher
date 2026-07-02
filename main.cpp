@@ -6,6 +6,11 @@
 #include <fstream>
 #include <iostream>
 #include <nlohmann/json.hpp>
+#include <spdlog/logger.h>
+#ifdef LOG_ENABLED
+#include <spdlog/sinks/basic_file_sink.h>
+#include <spdlog/spdlog.h>
+#endif
 #include <sstream>
 #ifndef _WIN32
 #include <unistd.h>
@@ -245,12 +250,32 @@ bool parse_arguments(int argc, char **argv, AppConfig &config) {
     return true;
 }
 
+#ifdef LOG_ENABLED
+void setup_file_logging(){
+    try {
+        auto my_logger = spdlog::basic_logger_mt("file_logger", "logs/last_log.txt", true);
+        
+        spdlog::set_default_logger(my_logger);
+        
+        spdlog::set_level(spdlog::level::debug);
+        spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] %v");
+        spdlog::flush_on(spdlog::level::err);
+        
+    } catch (const spdlog::spdlog_ex& ex) {
+        std::cerr << "Log initialization failed: " << ex.what() << std::endl;
+    }
+}
+#endif
+
 int main(int argc, char **argv) {
     std::setlocale(LC_ALL, "");
-#ifdef ENCFS_RUST_LIB
-    std::cout << "Rust lib was accepted\n";
-#endif
     AppConfig config;
+
+#ifdef LOG_ENABLED
+    setup_file_logging();
+    spdlog::info("Some info new logger");
+    spdlog::error("error in logs");
+#endif
     if (argc < 2) {
         print_usage();
         return EXIT_SUCCESS;
@@ -279,7 +304,8 @@ int main(int argc, char **argv) {
         return EXIT_FAILURE;
     }
 
-    if (!config.out_decrypted.empty()  && !fs::is_directory(config.out_decrypted, ec)) {
+    if (!config.out_decrypted.empty() &&
+        !fs::is_directory(config.out_decrypted, ec)) {
         std::cerr << "Errot: the argument for --out-decrypted '"
                   << config.out_decrypted << "' is not a directory.\n";
         return EXIT_FAILURE;
