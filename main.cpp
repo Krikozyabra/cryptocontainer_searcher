@@ -53,13 +53,33 @@ int check_for_enc_container(const fs::directory_entry &path_to_object,
     int return_code{crypto_decrypt::SUCCESS};
 
     if (fs::is_regular_file(path_to_object, ec)) {
+#ifdef LOG_ENABLED
+        spdlog::info("File analyzing started for " +
+                     path_to_object.path().string());
+#endif
         if (crypto_search::encfs_file(path_to_object.path())) {
             std::cout << path_to_object.path().parent_path() << std::endl;
             std::cout << "This folder is encrypted with EncFS" << std::endl;
+#ifdef LOG_ENABLED
+            spdlog::info("Folder " +
+                         path_to_object.path().parent_path().string() +
+                         " was determined as EncFS");
+#endif
             if (try_to_decrypt) {
+#ifdef LOG_ENABLED
+                spdlog::info("Decryption for this folder was started");
+#endif
                 for (const std::string &passphrase : pass_file["encfs"]) {
+#ifdef LOG_ENABLED
+                    spdlog::info("Trying to decrypt with passphrase " +
+                                 passphrase);
+#endif
                     return_code = crypto_decrypt::encfs(
                         path_to_object, passphrase, out_decrypted);
+#ifdef LOG_ENABLED
+                    spdlog::info("Return code for decryption is " +
+                                 std::to_string(return_code));
+#endif
                     if (return_code == crypto_decrypt::SUCCESS)
                         break;
                 }
@@ -70,10 +90,25 @@ int check_for_enc_container(const fs::directory_entry &path_to_object,
             std::cout << path_to_object.path() << std::endl;
             std::cout << "This is the container and encrypted with LUKS"
                       << std::endl;
+#ifdef LOG_ENABLED
+            spdlog::info("This file " + path_to_object.path().string() +
+                         " was determined as LUKS");
+#endif
             if (try_to_decrypt) {
+#ifdef LOG_ENABLED
+                spdlog::info("Decryption for this file was started");
+#endif
                 for (const std::string &passphrase : pass_file["luks"]) {
+#ifdef LOG_ENABLED
+                    spdlog::info("Trying to decrypt with passphrase " +
+                                 passphrase);
+#endif
                     return_code = crypto_decrypt::luks(
                         path_to_object, passphrase, out_decrypted);
+#ifdef LOG_ENABLED
+                    spdlog::info("Return code for decryption is " +
+                                 std::to_string(return_code));
+#endif
                     if (return_code == crypto_decrypt::SUCCESS)
                         break;
                 }
@@ -84,10 +119,25 @@ int check_for_enc_container(const fs::directory_entry &path_to_object,
             std::cout << path_to_object.path() << std::endl;
             std::cout << "This is the container and encrypted with PGP"
                       << std::endl;
+#ifdef LOG_ENABLED
+            spdlog::info("This file " + path_to_object.path().string() +
+                         " was determined as PGP");
+#endif
             if (try_to_decrypt) {
+#ifdef LOG_ENABLED
+                spdlog::info("Decryption for this file was started");
+#endif
                 for (const std::string &passphrase : pass_file["pgp"]) {
+#ifdef LOG_ENABLED
+                    spdlog::info("Trying to decrypt with passphrase " +
+                                 passphrase);
+#endif
                     return_code = crypto_decrypt::pgp(
                         path_to_object, passphrase, out_decrypted);
+#ifdef LOG_ENABLED
+                    spdlog::info("Return code for decryption is " +
+                                 std::to_string(return_code));
+#endif
                     if (return_code == crypto_decrypt::SUCCESS)
                         break;
                 }
@@ -99,18 +149,43 @@ int check_for_enc_container(const fs::directory_entry &path_to_object,
             std::cout << "This is the container and encrypted with "
                          "TrueCrypt\\VeraCrypt"
                       << std::endl;
+#ifdef LOG_ENABLED
+            spdlog::info("This file " + path_to_object.path().string() +
+                         " was determined as VeraCrypt or TrueCrypt");
+#endif
             if (try_to_decrypt) {
+#ifdef LOG_ENABLED
+                spdlog::info("Decryption for this file was started");
+#endif
                 for (const std::string &passphrase : pass_file["truecrypt"]) {
+#ifdef LOG_ENABLED
+                    spdlog::info(
+                        "Trying to decrypt like TrueCrypt with passphrase " +
+                        passphrase);
+#endif
                     return_code = crypto_decrypt::truecrypt(
                         path_to_object, passphrase, out_decrypted);
+#ifdef LOG_ENABLED
+                    spdlog::info("Return code for decryption is " +
+                                 std::to_string(return_code));
+#endif
                     if (return_code == crypto_decrypt::SUCCESS)
                         break;
                 }
                 if (return_code != crypto_decrypt::SUCCESS) {
                     for (const std::string &passphrase :
                          pass_file["veracrypt"]) {
+#ifdef LOG_ENABLED
+                        spdlog::info("Trying to decrypt like VeraCrypt with "
+                                     "passphrase " +
+                                     passphrase);
+#endif
                         return_code = crypto_decrypt::veracrypt(
                             path_to_object, passphrase, out_decrypted);
+#ifdef LOG_ENABLED
+                        spdlog::info("Return code for decryption is " +
+                                     std::to_string(return_code));
+#endif
                         if (return_code == crypto_decrypt::SUCCESS)
                             break;
                     }
@@ -125,17 +200,29 @@ int check_for_enc_container(const fs::directory_entry &path_to_object,
         std::cout << "No access to this file. Run in 'sudo' mode" << std::endl;
     }
 
+#ifdef LOG_ENABLED
+    spdlog::warn("This file " + path_to_object.path().string() +
+                 " was determined as nothing");
+#endif
+
     return return_code;
 }
 
 void folder_traveler(const fs::path &searching_folder, const json &pass_file,
                      const bool is_recursive, const bool try_to_decrypt,
                      const fs::path &out_decrypted) {
+#ifdef LOG_ENABLED
+    spdlog::info("Folder traveling started");
+#endif
     std::error_code ec;
     auto dir_iter = fs::directory_iterator(searching_folder, ec);
     if (ec) {
         std::cerr << "Warning: Cannot access folder " << searching_folder
                   << " (" << ec.message() << ")\n";
+#ifdef LOG_ENABLED
+        spdlog::error("Cannot access the searching folder " +
+                      searching_folder.string());
+#endif
         return;
     }
 
@@ -143,35 +230,33 @@ void folder_traveler(const fs::path &searching_folder, const json &pass_file,
         std::error_code entry_ec;
         bool is_dir = entry.is_directory(entry_ec);
         if (entry_ec) {
+#ifdef LOG_ENABLED
+            spdlog::warn("File " + entry.path().string() +
+                         " cannot be accessed");
+#endif
             continue;
         }
-
+#ifdef LOG_ENABLED
+        spdlog::info("Going into detection logic with file: " +
+                     entry.path().string());
+#endif
         // Run detection logic
         int return_result = check_for_enc_container(entry, try_to_decrypt,
                                                     pass_file, out_decrypted);
         switch (return_result) {
         case crypto_decrypt::ERR_DECRYPT:
             std::cerr << "No password found for this container" << std::endl;
-            break;
-        case crypto_decrypt::ERR_MOUNT:
-            std::cerr << "An error occurred while mounting" << std::endl;
-            break;
-        case crypto_decrypt::ERR_PIPE_OPEN:
-            std::cerr << "An error occurred while openning pipe for password"
-                      << std::endl;
-            break;
-        case crypto_decrypt::ERR_QUERY_PIPE:
-            std::cerr << "An error occured while openning pipe for read loop "
-                         "device path"
-                      << std::endl;
-            break;
-        case crypto_decrypt::ERR_LOOP_DEVICE:
-            std::cerr << "An error occured while creating loop device"
-                      << std::endl;
+#ifdef LOG_ENABLED
+            spdlog::warn("For entry " + entry.path().string() +
+                         " password not found");
+#endif
             break;
         }
         // Recurse
         if (is_recursive && is_dir) {
+#ifdef LOG_ENABLED
+            spdlog::info("Go recursive to " + entry.path().string());
+#endif
             folder_traveler(entry.path(), pass_file, is_recursive,
                             try_to_decrypt, out_decrypted);
         }
@@ -251,17 +336,18 @@ bool parse_arguments(int argc, char **argv, AppConfig &config) {
 }
 
 #ifdef LOG_ENABLED
-void setup_file_logging(){
+void setup_file_logging() {
     try {
-        auto my_logger = spdlog::basic_logger_mt("file_logger", "logs/last_log.txt", true);
-        
+        auto my_logger =
+            spdlog::basic_logger_mt("file_logger", "logs/last_log.txt", true);
+
         spdlog::set_default_logger(my_logger);
-        
+
         spdlog::set_level(spdlog::level::debug);
         spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] %v");
         spdlog::flush_on(spdlog::level::err);
-        
-    } catch (const spdlog::spdlog_ex& ex) {
+
+    } catch (const spdlog::spdlog_ex &ex) {
         std::cerr << "Log initialization failed: " << ex.what() << std::endl;
     }
 }
@@ -278,21 +364,33 @@ int main(int argc, char **argv) {
 #endif
     if (argc < 2) {
         print_usage();
+#ifdef LOG_ENABLED
+        spdlog::error("Count of arguments less than 2");
+#endif
         return EXIT_SUCCESS;
     }
 
     if (!parse_arguments(argc, argv, config)) {
         print_usage();
+#ifdef LOG_ENABLED
+        spdlog::error("Arguement parse error");
+#endif
         return EXIT_FAILURE;
     }
 
     if (config.show_help) {
         print_usage();
+#ifdef LOG_ENABLED
+        spdlog::info("Help was called");
+#endif
         return EXIT_SUCCESS;
     }
 
     if (config.show_version) {
         print_version();
+#ifdef LOG_ENABLED
+        spdlog::info("Version was called");
+#endif
         return EXIT_SUCCESS;
     }
 
@@ -301,6 +399,10 @@ int main(int argc, char **argv) {
     if (!fs::exists(config.searching_folder, ec)) {
         std::cerr << "Error: Folder '" << config.searching_folder
                   << "' does not exist.\n";
+#ifdef LOG_ENABLED
+        spdlog::error("Proceed foler " + config.searching_folder.string() +
+                      " does not exist");
+#endif
         return EXIT_FAILURE;
     }
 
@@ -308,6 +410,10 @@ int main(int argc, char **argv) {
         !fs::is_directory(config.out_decrypted, ec)) {
         std::cerr << "Errot: the argument for --out-decrypted '"
                   << config.out_decrypted << "' is not a directory.\n";
+#ifdef LOG_ENABLED
+        spdlog::error("The folder " + config.out_decrypted.string() +
+                      " for decrypted containers is not a directory");
+#endif
         return EXIT_FAILURE;
     }
 
@@ -316,11 +422,19 @@ int main(int argc, char **argv) {
         if (!fs::exists(config.decrypt_file, ec)) {
             std::cerr << "Error: file '" << config.decrypt_file
                       << "' does not exist.\n";
+#ifdef LOG_ENABLED
+            spdlog::error("File with passwords " +
+                          config.decrypt_file.string() + " does not exist");
+#endif
             return EXIT_FAILURE;
         }
         if (!fs::is_regular_file(config.decrypt_file, ec)) {
             std::cerr << "Error: '" << config.decrypt_file
                       << "' is not a file.\n";
+#ifdef LOG_ENABLED
+            spdlog::error("Proceed object for a password file " +
+                          config.decrypt_file.string() + " is not a file");
+#endif
             return EXIT_FAILURE;
         }
 
@@ -328,6 +442,10 @@ int main(int argc, char **argv) {
         if (!json_file.is_open()) {
             std::cerr << "Error: Could not open file '" << config.decrypt_file
                       << "'\n";
+#ifdef LOG_ENABLED
+            spdlog::error("File with passwords " +
+                          config.decrypt_file.string() + " can not be opened");
+#endif
             return EXIT_FAILURE;
         }
 
@@ -335,6 +453,11 @@ int main(int argc, char **argv) {
             pass_file = json::parse(json_file);
         } catch (const json::parse_error &e) {
             std::cerr << "Fatal Error parsing JSON: " << e.what() << "\n";
+#ifdef LOG_ENABLED
+            spdlog::error("File with passwords " +
+                          config.decrypt_file.string() +
+                          " generated the error while parsing: " + e.what());
+#endif
             return EXIT_FAILURE;
         }
     }
@@ -346,6 +469,9 @@ int main(int argc, char **argv) {
                         try_to_decrypt, config.out_decrypted);
     } catch (const std::exception &e) {
         std::cerr << "Fatal error: " << e.what() << "\n";
+#ifdef LOG_ENABLED
+        spdlog::error("Fatal error for the program: " + std::string(e.what()));
+#endif
         return EXIT_FAILURE;
     }
 
