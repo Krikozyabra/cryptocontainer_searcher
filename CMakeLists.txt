@@ -12,13 +12,25 @@ cmake_policy(SET CMP0135 NEW)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(EncfsDecrypt)   # defines the encfs::decrypt imported target
 
-# Fetch Catch2 from GitHub
 include(FetchContent)
-FetchContent_Declare(
-  Catch2
-  GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-  GIT_TAG        v3.4.0
-)
+
+if(TEST)
+    message(STATUS "Configuring build with tests turned on")
+    find_program(CRYPTSETUP_BIN NAMES cryptsetup REQUIRED)
+    find_program(VERACRYPT_BIN NAMES veracrypt REQUIRED)
+    find_program(TRUECRYPT_BIN NAMES truecrypt REQUIRED)
+    find_program(ENCFS_BIN NAMES encfs REQUIRED)
+    find_program(GPG_BIN NAMES gpg REQUIRED)
+    find_program(FUSE_BIN NAMES fusermount fusermount3 REQUIRED)
+    # Fetch Catch2 from GitHub
+    FetchContent_Declare(
+        Catch2
+        GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+        GIT_TAG        v3.4.0
+    )
+
+    FetchContent_MakeAvailable(Catch2)
+endif()
 
 # Fetch JsonParser from GitHub
 set(JSON_BuildTests OFF CACHE INTERNAL "") 
@@ -27,12 +39,13 @@ FetchContent_Declare(
   URL https://github.com/nlohmann/json/releases/download/v3.12.0/json.tar.xz
 )
 
-FetchContent_MakeAvailable(Catch2 json)
+FetchContent_MakeAvailable(json)
+
 
 # Find dependencies required by the entropy library
 find_package(Threads REQUIRED)
 if(LOG)
-    message(STATUS "Configuring build with log turn on")
+    message(STATUS "Configuring build with loggging turnen on")
     add_compile_definitions("LOG_ENABLED")
     find_package(spdlog REQUIRED)
 endif()
@@ -82,19 +95,28 @@ elseif(UNIX AND NOT APPLE)
 
 endif()
 
-# Enable testing
-enable_testing()
+if(TEST)
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(CRYPTSETUP REQUIRED IMPORTED_TARGET libcryptsetup)
 
-# Define test executable
-add_executable(unit_tests 
-    tests/test_search.cpp
-)
+    # Append Linux-only library
+    list(APPEND BUILD_LIBRARIES PkgConfig::CRYPTSETUP)
+    
+    # Enable testing
+    enable_testing()
 
-# Link the test executable with Catch2 and other dependencies
-target_link_libraries(unit_tests PRIVATE 
-    Catch2::Catch2WithMain
-    ${BUILD_LIBRARIES}
-)
+    # Define test executable
+    add_executable(unit_tests 
+        tests/test_search.cpp
+    )
 
-# Register the test executable with CTest
-add_test(NAME RunUnitTests COMMAND unit_tests)
+    # Link the test executable with Catch2 and other dependencies
+    target_link_libraries(unit_tests PRIVATE 
+        Catch2::Catch2WithMain
+        ${BUILD_LIBRARIES}
+    )
+
+    # Register the test executable with CTest
+    add_test(NAME RunUnitTests COMMAND unit_tests)
+endif()
+
