@@ -52,15 +52,17 @@ main.cpp                    — CLI-парсер, валидация, оркес
 
 ```bash
 # Системные зависимости (Debian/Ubuntu)
-sudo apt install build-essential cmake pkg-config libcryptsetup-dev libgpgme-dev
+sudo apt install build-essential cmake pkg-config libcryptsetup-dev libgpgme-dev tinyxml2
 
 # Классическая сборка
 cmake -B build
 
 # Сборка с включенными логами
+sudo apt intall spdlog
 cmake -B build -DLOG=ON 
 
 # Сборка с тестами (файл unit_tests)
+sudo apt intall encfs cryptsetup veracrypt truecrypt gpg
 cmake -B build -DTEST=ON
 
 # Компиляция программы
