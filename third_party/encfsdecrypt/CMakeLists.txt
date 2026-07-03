@@ -87,7 +87,7 @@ target_include_directories(encfs_decrypt PRIVATE
   ${ENCFSDECRYPT_ROOT}/src            # PortableFileIO.h, encfs_decrypt.h (also public)
   ${ENCFSDECRYPT_ROOT}/src/encfs      # encfs core headers + static config.h
 )
-target_include_directories(encfs_decrypt SYSTEM PRIVATE
+target_include_directories(encfs_decrypt SYSTEM PUBLIC
   ${ENCFSDECRYPT_ROOT}/vendor/easyloggingpp
   ${ENCFSDECRYPT_ROOT}/vendor/tinyxml2
 )

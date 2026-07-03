@@ -64,19 +64,6 @@ TEST_CASE( "create veracrypt container and try to find", "[veracrypt][search]" )
     REQUIRE( crypto_search::veracrypt_truecrypt_file(fs::path{"./test_search/test_file"}) == true );
 }
 
-TEST_CASE( "create truecrypt container and try to find", "[truecrypt][search]" ) {
-    TestDirectoryGuard guard;
-
-    const std::string crypt_container_command = "truecrypt -t -c ./test_search/test_file "
-        "--volume-type=normal --encryption=AES --hash=sha-512 "
-        "--filesystem=ext4 --size=33554432 --password=\"MyTestPassword123\" "
-        "--random-source=/dev/urandom --non-interactive --force";
-
-    run_system_command(crypt_container_command);
-
-    REQUIRE( crypto_search::veracrypt_truecrypt_file(fs::path{"./test_search/test_file"}) == true );
-}
-
 TEST_CASE( "create encfs container and try to find", "[encfs][search]" ) {
     TestDirectoryGuard directory_guard;
 

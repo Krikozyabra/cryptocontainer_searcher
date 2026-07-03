@@ -6,7 +6,9 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#ifdef LOG_ENABLED
 #include <spdlog/spdlog.h>
+#endif
 #include <system_error>
 #include <tinyxml2.h>
 

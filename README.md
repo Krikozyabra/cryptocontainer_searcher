@@ -52,17 +52,19 @@ main.cpp                    — CLI-парсер, валидация, оркес
 
 ```bash
 # Системные зависимости (Debian/Ubuntu)
-sudo apt install build-essential cmake pkg-config libcryptsetup-dev libgpgme-dev tinyxml2
+sudo apt install build-essential cmake pkg-config libcryptsetup-dev libgpgme-dev
 
 # Классическая сборка
 cmake -B build
 
 # Сборка с включенными логами
-sudo apt intall spdlog
+sudo apt install libspdlog-dev
 cmake -B build -DLOG=ON 
 
 # Сборка с тестами (файл unit_tests)
-sudo apt intall encfs cryptsetup veracrypt truecrypt gpg
+sudo add-apt-repository ppa:unit193/encryption
+sudo apt update
+sudo apt install encfs cryptsetup veracrypt gpg
 cmake -B build -DTEST=ON
 
 # Компиляция программы
@@ -96,6 +98,9 @@ cmake --build build
 ./build/crypto_search --folder /mnt/disk --recursive \
     --decrypt passwords.json \
     --out-decrypted ./decrypted
+
+# В случае, если логи пишутся в консоль (пока не знаю с чем связано)
+./build/crypto_search --filder ~ --recursive > some_logs.txt
 ```
 
 ### Флаги

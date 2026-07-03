@@ -6,7 +6,6 @@
 #include <fstream>
 #include <iostream>
 #include <nlohmann/json.hpp>
-#include <spdlog/logger.h>
 #ifdef LOG_ENABLED
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/spdlog.h>
@@ -345,7 +344,7 @@ void setup_file_logging() {
 
         spdlog::set_level(spdlog::level::debug);
         spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] %v");
-        spdlog::flush_on(spdlog::level::err);
+        spdlog::flush_on(spdlog::level::info);
 
     } catch (const spdlog::spdlog_ex &ex) {
         std::cerr << "Log initialization failed: " << ex.what() << std::endl;
