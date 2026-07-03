@@ -1,3 +1,4 @@
+
 # CryptoContainer Searcher
 
 Кроссплатформенная консольная утилита на C++ (стандарт C++17) для автоматического
@@ -43,7 +44,7 @@ main.cpp                    — CLI-парсер, валидация, оркес
 - **entropy** (yuchdev/entropy_calculator) — расчёт энтропии Шеннона
 - **libcryptsetup** — нативное дешифрование LUKS (только Linux)
 - **GPGME** — нативное дешифрование PGP/GnuPG
-- **CMake ≥ 3.15** — система сборки
+- **CMake ≥ 3.24** — система сборки
 
 ## Сборка
 
@@ -53,7 +54,16 @@ main.cpp                    — CLI-парсер, валидация, оркес
 # Системные зависимости (Debian/Ubuntu)
 sudo apt install build-essential cmake pkg-config libcryptsetup-dev libgpgme-dev
 
+# Классическая сборка
 cmake -B build
+
+# Сборка с включенными логами
+cmake -B build -DLOG=ON 
+
+# Сборка с тестами (файл unit_tests)
+cmake -B build -DTEST=ON
+
+# Компиляция программы
 cmake --build build
 ```
 
