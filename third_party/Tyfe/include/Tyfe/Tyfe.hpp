@@ -113,7 +113,7 @@ class Tyfe {
         }*/
 
         filename = file;
-        extension = std::filesystem::path(filename).extension();
+        extension = std::filesystem::path(filename).extension().string();
 
         binary_ext_iter =
             std::find(binary_ext.begin(), binary_ext.end(), extension);

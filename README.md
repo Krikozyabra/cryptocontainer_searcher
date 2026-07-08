@@ -74,13 +74,22 @@ cmake --build build
 ### Windows (MinGW)
 
 ```bash
-cmake --toolchain mingw-toolchain.cmake -B build
+# Сброка на MSYS2 UCRT
+pacman -S mingw-w64-ucrt-x86_64-gcc mingw64-ucrt-x86_64-make mingw64-ucrt-x86_64-gpgme
+cmake -B build -G "MinGW Makefiles"
+cmake --build build
+
+# Сборка на MSYS2 UCRT с логами
+pacman -S mingw-w64-ucrt-x86_64-spdlog
+cmake -B build -G "MinGW Makefiles" -DTEST=ON
 cmake --build build
 ```
 
 > **Примечание:** Дешифрование LUKS доступно только на Linux (зависит от
 > `libcryptsetup`). На остальных платформах модуль LUKS отключается на этапе
 > компиляции.
+> А также тесты доступны пока только на Linux, так как используют deb-пакеты
+> оригинальных программ для создания зашифрованных контейнеров.
 
 ## Использование
 

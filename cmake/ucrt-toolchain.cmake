@@ -1,0 +1,20 @@
+set(CMAKE_SYSTEM_NAME Windows)
+
+set(TOOLCHAIN_PREFIX x86_64-w64-mingw32)
+
+set(CMAKE_C_COMPILER ${TOOLCHAIN_PREFIX}-gcc)
+set(CMAKE_CXX_COMPILER ${TOOLCHAIN_PREFIX}-g++)
+set(CMAKE_RC_COMPILER ${TOOLCHAIN_PREFIX}-windres)
+
+set(CMAKE_FIND_ROOT_PATH "C:/msys64/ucrt64" /usr/${TOOLCHAIN_PREFIX})
+
+set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY BOTH)
+set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE BOTH)
+set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE BOTH)
+
+# Tell FindOpenSSL exactly where OpenSSL lives (dir containing include/ and lib/).
+set(OPENSSL_ROOT_DIR     "C:/msys64/ucrt64")
+set(OPENSSL_INCLUDE_DIR  "C:/msys64/ucrt64/include")
+set(OPENSSL_CRYPTO_LIBRARY "C:/msys64/ucrt64/lib/libcrypto.dll.a")
+set(OPENSSL_SSL_LIBRARY    "C:/msys64/ucrt64/lib/libssl.dll.a")

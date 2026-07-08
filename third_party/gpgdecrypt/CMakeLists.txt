@@ -13,7 +13,9 @@ target_include_directories(gpgdecrypt PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 if(WIN32)
     set(GPG4WIN_HINTS
-        "C:/Program Files/GnuPG"
+        "C:/Program Files/Gpg4win"
+        "C:/Program Files (x86)/Gpg4win"
+	"C:/Program Files/GnuPG"
         "C:/Program Files (x86)/GnuPG"
     )
 
