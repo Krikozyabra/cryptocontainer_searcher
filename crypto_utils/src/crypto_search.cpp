@@ -172,9 +172,9 @@ bool veracrypt_truecrypt_file(const fs::path &file) {
         return false;
 
     double chi_square = get_file_chi_square(file);
-    return (chi_square >= 200 &&
+    return (chi_square >= 190 &&
             chi_square <=
-                310); // bitween 1 and 99% of critical values of 256 degrees
+                325); // bitween 1 and 99% of critical values of 256 degrees
 }
 
 } // namespace crypto_search
