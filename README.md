@@ -75,7 +75,7 @@ cmake --build build
 
 ```bash
 # Сброка на MSYS2 UCRT
-pacman -S mingw-w64-ucrt-x86_64-gcc mingw64-ucrt-x86_64-make mingw64-ucrt-x86_64-gpgme
+pacman -S mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-make mingw-w64-ucrt-x86_64-gpgme mingw-w64-ucrt-x86_64-cmake 
 cmake -B build -G "MinGW Makefiles"
 cmake --build build
 
