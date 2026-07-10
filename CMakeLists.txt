@@ -57,6 +57,10 @@ add_subdirectory(third_party/gpgdecrypt)
 add_subdirectory(third_party/Tyfe)
 add_subdirectory(crypto_utils)
 
+if(WIN32)
+    add_subdirectory(windows_utils)
+endif()
+
 # Define executable, referencing main.cpp
 add_executable(crypto_search main.cpp)
 
@@ -70,6 +74,12 @@ set(BUILD_LIBRARIES
 if(LOG)
     list(APPEND BUILD_LIBRARIES
         spdlog::spdlog
+    )
+endif()
+
+if(WIN32)
+    list(APPEND BUILD_LIBRARIES
+        windows_utils
     )
 endif()
 
