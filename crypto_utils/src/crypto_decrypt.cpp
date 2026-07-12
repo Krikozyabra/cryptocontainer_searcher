@@ -1,6 +1,6 @@
 #include "crypto_utils/crypto_decrypt.h"
 #include "encfs_decrypt.h"
-#include "gpgdecrypt.h"
+#include "gpgutil.hpp"
 #include "tcdecrypt.hpp"
 #include "vcdecrypt.hpp"
 #ifdef SUPPORT_LUKS
@@ -64,10 +64,7 @@ int pgp(const fs::path &file, const std::string &password,
     const std::string stem_str = file.stem().string();
     const fs::path decrypted_file{out_decrypted /
                                   fs::path(stem_str + "_decrypted")};
-    if (!pgpdecrypt::initialize()) {
-        return ERR_PIPE_OPEN;
-    }
-    if (!pgpdecrypt::decryptSymmetric(file.string(), decrypted_file.string(),
+    if (!pgputil::decryptSymmetric(file.string(), decrypted_file.string(),
                                       password))
         return ERR_DECRYPT;
 

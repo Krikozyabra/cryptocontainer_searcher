@@ -1,6 +1,7 @@
 #include "crypto_utils/crypto_search.h"
 #include "Tyfe/Tyfe.hpp"
 #include "entropy/shannon_entropy.h"
+#include "gpgutil.hpp"
 #include <array>
 #include <cstring>
 #include <filesystem>
@@ -141,17 +142,34 @@ bool pgp_file(const fs::path &file) {
     #ifdef LOG_ENABLED
        spdlog::info("PGP detection started for " + file.string());
     #endif
-    // Cast hex constants to char to avoid compilation warnings on signed-char
-    // systems
-    constexpr std::array<char, 6> pgp_magic{
-        static_cast<char>(0x8c), static_cast<char>(0x0d),
-        static_cast<char>(0x04), static_cast<char>(0x09),
-        static_cast<char>(0x03), static_cast<char>(0x0A)};
 
-    std::array<char, 6> magic;
-    if (read_header(file, magic)) {
-        return magic == pgp_magic;
+    std::ifstream fileStream(file.string(), std::ios::binary);
+    if (!fileStream) {
+        return false;
     }
+
+    unsigned char firstByte = 0;
+    if (!fileStream.read(reinterpret_cast<char*>(&firstByte), 1)) {
+        return false;
+    }
+
+    if ((firstByte & 0x80) == 0) {
+        return false;
+    }
+
+    bool isNewFormat = (firstByte & 0x40) != 0;
+    int packetTag = 0;
+
+    if (isNewFormat) {
+        packetTag = firstByte & 0x3F;
+    } else {
+        packetTag = (firstByte >> 2) & 0x0F;
+    }
+
+    if (packetTag == 3) {
+        return true;
+    }
+
     return false;
 }
 

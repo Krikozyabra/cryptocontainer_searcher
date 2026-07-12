@@ -45,6 +45,7 @@ FetchContent_MakeAvailable(json)
 find_package(Threads REQUIRED)
 if(LOG)
     message(STATUS "Configuring build with loggging turnen on")
+	add_compile_definitions(SPDLOG_COMPILED_LIB SPDLOG_SHARED_LIB)
     add_compile_definitions("LOG_ENABLED")
     find_package(spdlog REQUIRED)
 endif()
@@ -65,6 +66,7 @@ set(BUILD_LIBRARIES
     crypto_utils
     Threads::Threads
     nlohmann_json::nlohmann_json
+    gpgutil
 )
 
 if(LOG)

@@ -1,5 +1,6 @@
 #include "crypto_utils/crypto_decrypt.h"
 #include "crypto_utils/crypto_search.h"
+#include "gpgutil.hpp"
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
@@ -50,7 +51,7 @@ int check_for_enc_container(const fs::directory_entry &folder_entry,
     std::error_code ec;
     int return_code{crypto_decrypt::SUCCESS};
 
-    if (fs::is_regular_file(folder_entry, ec)) {
+    if (!fs::is_regular_file(folder_entry, ec)) {return return_code; }
 #ifdef LOG_ENABLED
         spdlog::info("File analyzing started for " +
                      folder_entry.path().string());
@@ -112,12 +113,13 @@ int check_for_enc_container(const fs::directory_entry &folder_entry,
                         break;
                 }
             }
+            std::cout<<std::endl;
             return return_code;
         }
+
         if (crypto_search::pgp_file(folder_entry.path())) {
             std::cout << folder_entry.path() << std::endl;
-            std::cout << "This is the container and encrypted with PGP"
-                      << std::endl;
+            std::cout << "This is the container and encrypted with PGP\n";
 #ifdef LOG_ENABLED
             spdlog::info("This file " + folder_entry.path().string() +
                          " was determined as PGP");
@@ -143,6 +145,7 @@ int check_for_enc_container(const fs::directory_entry &folder_entry,
             }
             return return_code;
         }
+
         if (crypto_search::veracrypt_truecrypt_file(folder_entry.path())) {
             std::cout << folder_entry.path() << std::endl;
             std::cout << "This is the container and encrypted with "
@@ -190,9 +193,9 @@ int check_for_enc_container(const fs::directory_entry &folder_entry,
                     }
                 }
             }
+            std::cout<<std::endl;
             return return_code;
         }
-    }
 
     if (ec == std::errc::permission_denied) {
         std::cout << folder_entry.path() << std::endl;
@@ -247,15 +250,7 @@ void folder_traveler(const fs::path &searching_folder, const json &pass_file,
                                                     pass_file, out_decrypted);
         switch (return_result) {
         case crypto_decrypt::ERR_DECRYPT:
-            std::cerr << "No password found for this container" << std::endl;
-#ifdef LOG_ENABLED
-            spdlog::warn("For entry " + entry.path().string() +
-                         " password not found");
-#endif
-            break;
-
-        case crypto_decrypt::ERR_PIPE_OPEN:
-            std::cerr << "Error while init pgpdecryption" << std::endl;
+            std::cerr << "No password found for this container\n\n";
 #ifdef LOG_ENABLED
             spdlog::warn("For entry " + entry.path().string() +
                          " password not found");
@@ -331,11 +326,18 @@ void setup_file_logging() {
 int main(int argc, char **argv) {
     std::setlocale(LC_ALL, "");
     AppConfig config;
-
 #ifdef LOG_ENABLED
     setup_file_logging();
     spdlog::info("Logger start message");
 #endif
+
+    if (!pgputil::initialize()){
+#ifdef LOG_ENABLED
+        spdlog::error("Error caused while gpgme initializing.");
+#endif
+        std::cerr << "Error caused while gpgme initializing\n";
+        return EXIT_FAILURE;
+    }
     if (argc < 2) {
         print_usage();
 #ifdef LOG_ENABLED
