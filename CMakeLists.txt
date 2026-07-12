@@ -96,6 +96,49 @@ elseif(UNIX AND NOT APPLE)
 
 endif()
 
+# ==========================================================================
+# Ship the portable GnuPG engine next to the executable.
+#
+# At runtime pgputil::initialize() looks for the portable engine at
+# "<exe_dir>/gpg_portable/bin/gpg[.exe]" and its home at
+# "<exe_dir>/gpg_portable/home". Copy the tree that lives in
+# third_party/gpg_portable next to the freshly built binary so the program can
+# find it out of the box (primarily needed on Windows, where a portable Gpg4win
+# is bundled, but harmless everywhere).
+#
+# Stale runtime state committed with the tree (lock files and the keyboxd spawn
+# sentinel) is intentionally NOT copied: shipping those can wedge gpg-agent /
+# keyboxd on first launch.
+# ==========================================================================
+set(GPG_PORTABLE_SRC "${CMAKE_CURRENT_SOURCE_DIR}/third_party/gpg_portable")
+
+if(EXISTS "${GPG_PORTABLE_SRC}")
+    set(GPG_PORTABLE_DST "$<TARGET_FILE_DIR:crypto_search>/gpg_portable")
+
+    add_custom_command(TARGET crypto_search POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E rm -rf "${GPG_PORTABLE_DST}"
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+                "${GPG_PORTABLE_SRC}" "${GPG_PORTABLE_DST}"
+        # Drop stale runtime state so a clean home ships with the binary.
+        COMMAND ${CMAKE_COMMAND} -E rm -f
+                "${GPG_PORTABLE_DST}/home/pubring.kbx.lock"
+                "${GPG_PORTABLE_DST}/home/trustdb.gpg.lock"
+                "${GPG_PORTABLE_DST}/home/gnupg_spawn_keyboxd_sentinel.lock"
+        COMMENT "Copying portable GnuPG engine next to crypto_search"
+        VERBATIM
+    )
+
+    # Also stage it for `cmake --install` based packaging.
+    install(DIRECTORY "${GPG_PORTABLE_SRC}/"
+            DESTINATION "bin/gpg_portable"
+            PATTERN "*.lock" EXCLUDE
+            PATTERN "gnupg_spawn_keyboxd_sentinel.lock" EXCLUDE)
+    install(TARGETS crypto_search RUNTIME DESTINATION "bin")
+else()
+    message(WARNING "third_party/gpg_portable not found; the portable GnuPG "
+                    "engine will not be bundled next to crypto_search.")
+endif()
+
 if(TEST)
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(CRYPTSETUP REQUIRED IMPORTED_TARGET libcryptsetup)
@@ -120,4 +163,3 @@ if(TEST)
     # Register the test executable with CTest
     add_test(NAME RunUnitTests COMMAND unit_tests)
 endif()
-

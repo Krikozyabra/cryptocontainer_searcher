@@ -60,3 +60,6 @@ test*/
 log*/
 
 decrypted*/
+
+third_party/gpg_portable/home/*.lock
+third_party/gpg_portable/home/gnupg_spawn_keyboxd_sentinel.lock
