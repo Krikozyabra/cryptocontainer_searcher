@@ -3,6 +3,8 @@
 #include <locale.h>
 #include <iostream>
 #include <fstream>
+#include <iterator>
+#include <string>
 #include <cstring>
 #include <filesystem>
 #include <cstdio>
@@ -100,21 +102,33 @@ bool pgputil::decryptSymmetric(const std::string& inputPath,
 
     {
         std::filesystem::path p(inputPath);
-        
-        auto u8_str = p.u8string();
-        std::string utf8_path(u8_str.begin(), u8_str.end());
 
-        if (!std::filesystem::exists(p)) {
-            std::cerr << "[GPGME] Error: Input file does not exist: " << utf8_path << std::endl;
+        std::error_code ec;
+        if (!std::filesystem::exists(p, ec) || !std::filesystem::is_regular_file(p, ec)) {
+            std::cerr << "[GPGME] Error: Input file does not exist: " << inputPath << std::endl;
             goto cleanup;
         }
 
-        if (gpgme_data_new_from_file(&cipher, utf8_path.c_str(), 1) != GPG_ERR_NO_ERROR) {
+        std::ifstream inFile(p, std::ios::binary);
+        if (!inFile) {
+            std::cerr << "[GPGME] Error: Cannot open input file: " << inputPath << std::endl;
             goto cleanup;
         }
-        
+
+        std::string cipherBytes((std::istreambuf_iterator<char>(inFile)),
+                                 std::istreambuf_iterator<char>());
+        if (cipherBytes.empty()) {
+            std::cerr << "[GPGME] Error: Input file is empty: " << inputPath << std::endl;
+            goto cleanup;
+        }
+
+        if (gpgme_data_new_from_mem(&cipher, cipherBytes.data(), cipherBytes.size(), 1)
+                != GPG_ERR_NO_ERROR) {
+            goto cleanup;
+        }
+
         if (gpgme_data_new(&plain) != GPG_ERR_NO_ERROR) goto cleanup;
-        
+
         gpgme_error_t decryptErr = gpgme_op_decrypt(ctx, cipher, plain);
         if (decryptErr != GPG_ERR_NO_ERROR) {
             std::cerr << "[GPGME] Decryption failed: " << gpgme_strerror(decryptErr) << std::endl;
