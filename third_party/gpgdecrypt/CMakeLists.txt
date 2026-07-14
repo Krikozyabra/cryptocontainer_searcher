@@ -9,14 +9,26 @@ add_library(gpgutil STATIC
     gpgutil.hpp
 )
 
+# Force 64-bit file offsets. This perfectly aligns the 'off_t' size 
+# inside GpgME::Data with the precompiled MSYS2 UCRT64 libraries.
+target_compile_definitions(gpgutil PUBLIC _FILE_OFFSET_BITS=64)
+
 target_include_directories(gpgutil PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
-# Сначала пробуем найти GPGME через PkgConfig (подходит для Linux, macOS и Windows MSYS2 UCRT64)
 find_package(PkgConfig QUIET)
+# This successfully finds GpgmeppConfig.cmake provided by MSYS2
+find_package(Gpgmepp REQUIRED)
 
 if(PkgConfig_FOUND)
+    message(STATUS "PkgConfig found for gpgdecrypt")
     pkg_check_modules(GPGME REQUIRED gpgme IMPORTED_TARGET)
-    target_link_libraries(gpgutil PUBLIC PkgConfig::GPGME)
+    
+    # We directly link the CMake target (Gpgmepp) found by find_package() 
+    # instead of asking pkg-config for it, because MSYS2 doesn't bundle gpgmepp.pc
+    target_link_libraries(gpgutil PUBLIC 
+        PkgConfig::GPGME 
+        Gpgmepp
+    )
 
     pkg_check_modules(GPG_ERROR gpg-error IMPORTED_TARGET)
     if(GPG_ERROR_FOUND)
@@ -49,20 +61,28 @@ else()
             HINTS ${GPG4WIN_HINTS}
             PATH_SUFFIXES lib
         )
+        
+        # GPGMEPP (the C++ wrapper library) Windows fallback
+        find_library(GPGMEPP_LIBRARY
+            NAMES gpgmepp libgpgmepp-6 libgpgmepp
+            HINTS ${GPG4WIN_HINTS}
+            PATH_SUFFIXES lib
+        )
+
         find_library(GPG_ERROR_LIBRARY
             NAMES gpg-error libgpg-error-0 libgpg-error-6 libgpg-error
             HINTS ${GPG4WIN_HINTS}
             PATH_SUFFIXES lib
         )
 
-        if(GPGME_INCLUDE_DIR AND GPGME_LIBRARY)
+        if(GPGME_INCLUDE_DIR AND GPGME_LIBRARY AND GPGMEPP_LIBRARY)
             target_include_directories(gpgutil PRIVATE ${GPGME_INCLUDE_DIR})
-            target_link_libraries(gpgutil PUBLIC ${GPGME_LIBRARY})
+            target_link_libraries(gpgutil PUBLIC ${GPGME_LIBRARY} ${GPGMEPP_LIBRARY})
             if(GPG_ERROR_LIBRARY)
                 target_link_libraries(gpgutil PUBLIC ${GPG_ERROR_LIBRARY})
             endif()
         else()
-            message(FATAL_ERROR "GPGME not found. Please install Gpg4win or configure PKG_CONFIG_PATH.")
+            message(FATAL_ERROR "GPGME or GPGMEPP not found. Please install Gpg4win or configure PKG_CONFIG_PATH.")
         endif()
     else()
         message(FATAL_ERROR "PkgConfig not found. Cannot build on Unix without PkgConfig.")

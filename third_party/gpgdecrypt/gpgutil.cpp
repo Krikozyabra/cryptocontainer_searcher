@@ -1,155 +1,219 @@
 #include "gpgutil.hpp"
-#include <gpgme.h>
-#include <locale.h>
+#include <gpgme.h> 
+#include <gpgme++/context.h>
+#include <gpgme++/data.h>
+#include <gpgme++/decryptionresult.h>
+#include <gpgme++/interfaces/passphraseprovider.h>
+#include <gpgme++/engineinfo.h>
+#include <gpgme++/global.h>
 #include <iostream>
 #include <fstream>
-#include <iterator>
-#include <string>
-#include <cstring>
-#include <filesystem>
+#include <memory>
+#include <vector>
+#include <cstring> 
+#include <cstdlib>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <mutex>
 #include <cstdio>
 
 #ifdef _WIN32
 #include <windows.h>
-#endif
-
-static bool g_gpgmeInitialized = false;
-
-static std::filesystem::path get_executable_directory() {
-#ifdef _WIN32
-    wchar_t path[MAX_PATH];
-    GetModuleFileNameW(NULL, path, MAX_PATH);
-    return std::filesystem::path(path).parent_path();
 #else
-    return std::filesystem::read_symlink("/proc/self/exe").parent_path();
+#include <unistd.h>
+#include <limits.h>
 #endif
-}
 
-static gpgme_error_t passphrase_cb(void *hook, const char *uid_hint, const char *passphrase_info,
-                                    int prev_was_bad, int fd) {
-    if (prev_was_bad) {
-        std::cerr << "[GPGME Callback] Error: The provided passphrase was incorrect." << std::endl;
-        return gpg_error(GPG_ERR_CANCELED);
+// Helper to reliably retrieve the directory path of the current executable
+static std::string getExecutableDir() {
+#ifdef _WIN32
+    char path[MAX_PATH];
+    DWORD len = GetModuleFileNameA(NULL, path, MAX_PATH);
+    if (len > 0) {
+        std::string p(path, len);
+        size_t pos = p.find_last_of("\\/");
+        if (pos != std::string::npos) {
+            return p.substr(0, pos);
+        }
     }
-    const char *passphrase = static_cast<const char*>(hook);
-    if (!passphrase) return gpg_error(GPG_ERR_CANCELED);
-
-    size_t len = std::strlen(passphrase);
-    if (gpgme_io_writen(fd, passphrase, len) < 0) return gpg_error_from_syserror();
-    if (gpgme_io_writen(fd, "\n", 1) < 0) return gpg_error_from_syserror();
-    return 0;
+#else
+    char path[PATH_MAX];
+    ssize_t len = readlink("/proc/self/exe", path, sizeof(path) - 1);
+    if (len != -1) {
+        path[len] = '\0';
+        std::string p(path);
+        size_t pos = p.find_last_of("/");
+        if (pos != std::string::npos) {
+            return p.substr(0, pos);
+        }
+    }
+#endif
+    return ".";
 }
+
+static bool fileExists(const std::string& path) {
+    struct stat buffer;   
+    return (stat(path.c_str(), &buffer) == 0); 
+}
+
+class MyPassphraseProvider : public GpgME::PassphraseProvider {
+private:
+    std::string m_passphrase;
+public:
+    MyPassphraseProvider(const std::string& passphrase) : m_passphrase(passphrase) {}
+
+    char* getPassphrase(const char* useridHint, const char* description,
+                        bool previousWasBad, bool& wasCanceled) override {
+        std::cout<<"TEST!\n";
+        wasCanceled = false;
+        char* pw = static_cast<char*>(std::malloc(m_passphrase.length() + 1));
+        if (pw) {
+            std::strcpy(pw, m_passphrase.c_str());
+        }
+        return pw;
+    }
+};
+
+static std::once_flag gpgme_init_flag;
+static bool gpgme_init_success = false;
 
 bool pgputil::initialize() {
-    if (g_gpgmeInitialized) return true;
+    std::call_once(gpgme_init_flag, []() {
+        GpgME::initializeLibrary(0);
 
-    std::setlocale(LC_ALL, "");
-    if (!gpgme_check_version(nullptr)) return false;
-
-    std::filesystem::path exeDir = get_executable_directory();
-    std::filesystem::path portableGpgBin = exeDir / "gpg_portable" / "bin" / "gpg.exe";
-    std::filesystem::path portableHomeDir = exeDir / "gpg_portable" / "home";
-
-#ifndef _WIN32
-    portableGpgBin = exeDir / "gpg_portable" / "bin" / "gpg";
-#endif
-
-    if (std::filesystem::exists(portableGpgBin)) {
-        gpgme_set_engine_info(GPGME_PROTOCOL_OpenPGP, 
-                              portableGpgBin.string().c_str(), 
-                              portableHomeDir.string().c_str());
-    } else {
+        std::string exeDir = getExecutableDir();
+        std::string portableGpgBin = exeDir + "/gpg_portable/bin/gpg";
 #ifdef _WIN32
-        std::string gpgPath = "C:\\Program Files\\GnuPG\\bin\\gpg.exe";
-        if (!std::filesystem::exists(gpgPath)) {
-            gpgPath = "C:\\Program Files (x86)\\GnuPG\\bin\\gpg.exe";
+        portableGpgBin += ".exe";
+#endif
+        std::string portableGpgHome = exeDir + "/gpg_portable/home";
+
+        if (fileExists(portableGpgBin)) {
+            gpgme_error_t raw_err = gpgme_set_engine_info(GPGME_PROTOCOL_OpenPGP, 
+                                                          portableGpgBin.c_str(), 
+                                                          portableGpgHome.c_str());
+            if (raw_err != GPG_ERR_NO_ERROR) {
+                std::cerr << "Warning: Failed to map portable GnuPG engine: " 
+                          << gpgme_strerror(raw_err) << std::endl;
+            }
         }
 
-        if (std::filesystem::exists(gpgPath)) {
-            gpgme_set_engine_info(GPGME_PROTOCOL_OpenPGP, gpgPath.c_str(), nullptr);
+        GpgME::Error err = GpgME::checkEngine(GpgME::OpenPGP);
+        if (err) {
+            std::cerr << "GPGME Engine initialization failed: " << err.asString() << std::endl;
+            gpgme_init_success = false;
         } else {
-            std::cerr << "[WARNING] Portable GnuPG and default Gpg4win path not found. Relying on system PATH." << std::endl;
+            gpgme_init_success = true;
         }
-#endif
-    }
+    });
 
-    gpgme_set_locale(nullptr, LC_CTYPE, std::setlocale(LC_CTYPE, nullptr));
-#ifdef LC_MESSAGES
-    gpgme_set_locale(nullptr, LC_MESSAGES, std::setlocale(LC_MESSAGES, nullptr));
-#endif
-
-    if (gpgme_engine_check_version(GPGME_PROTOCOL_OpenPGP) != GPG_ERR_NO_ERROR) return false;
-
-    g_gpgmeInitialized = true;
-    return true;
+    return gpgme_init_success;
 }
 
 bool pgputil::decryptSymmetric(const std::string& inputPath, 
                                const std::string& outputPath, 
                                const std::string& passphrase) {
-    if (!g_gpgmeInitialized) return false;
-
-    gpgme_ctx_t ctx = nullptr;
-    gpgme_data_t cipher = nullptr;
-    gpgme_data_t plain = nullptr;
-    bool success = false;
-
-    if (gpgme_new(&ctx) != GPG_ERR_NO_ERROR) return false;
-    gpgme_set_protocol(ctx, GPGME_PROTOCOL_OpenPGP);
-    
-    if (gpgme_set_pinentry_mode(ctx, GPGME_PINENTRY_MODE_LOOPBACK) != GPG_ERR_NO_ERROR) goto cleanup;
-    gpgme_set_passphrase_cb(ctx, passphrase_cb, const_cast<char*>(passphrase.c_str()));
-
-    {
-        std::filesystem::path p(inputPath);
-
-        std::error_code ec;
-        if (!std::filesystem::exists(p, ec) || !std::filesystem::is_regular_file(p, ec)) {
-            std::cerr << "[GPGME] Error: Input file does not exist: " << inputPath << std::endl;
-            goto cleanup;
-        }
-
-        std::ifstream inFile(p, std::ios::binary);
-        if (!inFile) {
-            std::cerr << "[GPGME] Error: Cannot open input file: " << inputPath << std::endl;
-            goto cleanup;
-        }
-
-        std::string cipherBytes((std::istreambuf_iterator<char>(inFile)),
-                                 std::istreambuf_iterator<char>());
-        if (cipherBytes.empty()) {
-            std::cerr << "[GPGME] Error: Input file is empty: " << inputPath << std::endl;
-            goto cleanup;
-        }
-
-        if (gpgme_data_new_from_mem(&cipher, cipherBytes.data(), cipherBytes.size(), 1)
-                != GPG_ERR_NO_ERROR) {
-            goto cleanup;
-        }
-
-        if (gpgme_data_new(&plain) != GPG_ERR_NO_ERROR) goto cleanup;
-
-        gpgme_error_t decryptErr = gpgme_op_decrypt(ctx, cipher, plain);
-        if (decryptErr != GPG_ERR_NO_ERROR) {
-            std::cerr << "[GPGME] Decryption failed: " << gpgme_strerror(decryptErr) << std::endl;
-            goto cleanup;
-        }
-
-        gpgme_data_seek(plain, 0, SEEK_SET);
-        std::ofstream outFile(outputPath, std::ios::binary);
-        if (!outFile) goto cleanup;
-
-        char buffer[4096];
-        gpgme_ssize_t bytesRead = 0;
-        while ((bytesRead = gpgme_data_read(plain, buffer, sizeof(buffer))) > 0) {
-            outFile.write(buffer, bytesRead);
-        }
-        success = true;
+    if (!initialize()) {
+        std::cerr << "Error: GPGME is not initialized correctly." << std::endl;
+        return false;
     }
 
-cleanup:
-    if (cipher) gpgme_data_release(cipher);
-    if (plain) gpgme_data_release(plain);
-    if (ctx) gpgme_release(ctx);
-    return success;
+    std::unique_ptr<GpgME::Context> ctx(GpgME::Context::createForProtocol(GpgME::OpenPGP));
+    if (!ctx) {
+        std::cerr << "Error: Failed to create GpgME context." << std::endl;
+        return false;
+    }
+
+    ctx->setPinentryMode(GpgME::Context::PinentryLoopback);
+    MyPassphraseProvider provider(passphrase);
+    ctx->setPassphraseProvider(&provider);
+
+    FILE* fp = fopen(inputPath.c_str(), "rb");
+    if (!fp) {
+        std::cerr << "Error loading ciphertext file: Could not open " << inputPath << std::endl;
+        return false;
+    }
+    // Automatically close fp when exiting scope (even on failure)
+    std::unique_ptr<FILE, decltype(&fclose)> filePtr(fp, &fclose);
+
+    // Provide the stream to GPGME to avoid off_t ABI issues
+    gpgme_data_t raw_cipher = nullptr;
+    if (gpgme_data_new_from_stream(&raw_cipher, fp) != GPG_ERR_NO_ERROR) {
+        std::cerr << "Error: Failed to initialize GPGME data stream." << std::endl;
+        return false;
+    }
+    
+    GpgME::Data cipherData(raw_cipher);
+    GpgME::Data plainData;
+
+    GpgME::DecryptionResult result = ctx->decrypt(cipherData, plainData);
+    if (result.error()) {
+        std::cerr << "Decryption failed: " << result.error().asString() << std::endl;
+        return false;
+    }
+
+    plainData.seek(0, SEEK_SET); 
+    std::ofstream outFile(outputPath, std::ios::binary);
+    if (!outFile) {
+        std::cerr << "Error: Could not open output file: " << outputPath << std::endl;
+        return false;
+    }
+    
+    std::vector<char> buffer(4096);
+    ssize_t bytesRead;
+    while ((bytesRead = plainData.read(buffer.data(), buffer.size())) > 0) {
+        outFile.write(buffer.data(), bytesRead);
+    }
+
+    return true;
+}
+
+pgputil::PgpContainerType pgputil::analyzePgpEncryption(const std::string& filePath) {
+    if (!initialize()) {
+        return PgpContainerType::UnknownError;
+    }
+
+    std::unique_ptr<GpgME::Context> ctx(GpgME::Context::createForProtocol(GpgME::OpenPGP));
+    if (!ctx) {
+        return PgpContainerType::UnknownError;
+    }
+
+    // Measure the actual file size
+    std::ifstream checkIn(filePath, std::ios::binary | std::ios::ate);
+    if (!checkIn.good()) {
+        return PgpContainerType::NotPgpOrInvalid;
+    }
+    std::streamsize fileSize = checkIn.tellg();
+    checkIn.close();
+
+    if (fileSize <= 0) {
+        return PgpContainerType::NotPgpOrInvalid;
+    }
+
+    GpgME::Data cipherData(filePath.c_str(), (off_t)0, (size_t)fileSize);
+    GpgME::Data dummyPlainData;
+    
+    // FIX 2: Ensure pinentry loopback is enforced here as well with an empty provider.
+    // If we guess wrongly, this prevents a rogue GUI passphrase popup from blocking the CLI tool.
+    MyPassphraseProvider provider("");
+    ctx->setPinentryMode(GpgME::Context::PinentryLoopback);
+    ctx->setPassphraseProvider(&provider);
+
+    GpgME::DecryptionResult result = ctx->decrypt(cipherData, dummyPlainData);
+
+    GpgME::Error decError = result.error();
+    
+    if (decError.code() == GPG_ERR_NO_DATA || decError.code() == GPG_ERR_BAD_DATA) {
+        return PgpContainerType::NotPgpOrInvalid;
+    }
+
+    if (decError.code() == GPG_ERR_NO_SECKEY || !result.recipients().empty()) {
+        return PgpContainerType::Asymmetric;
+    }
+
+    if (result.recipients().empty()) {
+        return PgpContainerType::Symmetric;
+    }
+
+    return PgpContainerType::UnknownError;
 }
