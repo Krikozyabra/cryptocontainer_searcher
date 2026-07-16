@@ -190,7 +190,6 @@ bool pgputil::decryptSymmetric(const std::string& inputPath,
 #ifdef _WIN32
     std::string gpgBin = getGpgBinary();
     std::string gpgHome = getGpgHome();
-
     std::string rawCmd = "\"" + gpgBin + "\" --homedir \"" + gpgHome + "\" --batch --yes --no-tty --pinentry-mode loopback --passphrase-fd 0 --decrypt --output \"" + cleanOutput + "\" \"" + cleanInput + "\"";
 
     int exitCode = 0;

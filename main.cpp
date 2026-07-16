@@ -153,7 +153,7 @@ int check_for_enc_container(const fs::directory_entry &folder_entry,
                          "TrueCrypt\\VeraCrypt"
                       << std::endl;
 #ifdef LOG_ENABLED
-            spdlog::info("This file " + fs::absolute(folder_entry).generic_string().string() +
+            spdlog::info("This file " + fs::absolute(folder_entry).generic_string() +
                          " was determined as VeraCrypt or TrueCrypt");
 #endif
             if (try_to_decrypt) {

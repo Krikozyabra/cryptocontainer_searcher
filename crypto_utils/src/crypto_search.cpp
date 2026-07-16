@@ -139,55 +139,65 @@ bool luks_file(const fs::path &file) {
 }
 
 bool pgp_file(const fs::path &file) {
-    #ifdef LOG_ENABLED
-       spdlog::info("PGP detection started for " + file.string());
-    #endif
-
     std::ifstream fileStream(file.string(), std::ios::binary);
-    if (!fileStream) {
-        return false;
-    }
+    if (!fileStream) return false;
 
-    unsigned char firstByte = 0;
-    if (!fileStream.read(reinterpret_cast<char*>(&firstByte), 1)) {
-        return false;
-    }
-
-    if ((firstByte & 0x80) == 0) {
-        return false;
-    }
+    // reading header of the first packet
+    unsigned char firstByte;
+    if (!fileStream.read(reinterpret_cast<char*>(&firstByte), 1)) return false;
+    if ((firstByte & 0x80) == 0) return false;
 
     bool isNewFormat = (firstByte & 0x40) != 0;
-    int packetTag = 0;
+    int packetTag = isNewFormat ? (firstByte & 0x3F) : ((firstByte >> 2) & 0x0F);
 
-    if (isNewFormat) {
-        packetTag = firstByte & 0x3F;
+    // first packet is tag 3
+    if (packetTag != 3) return false;
+
+    // finding the body length of the first packet
+    uint32_t packetLength = 0;
+
+    if (!isNewFormat) { 
+        int lenType = firstByte & 0x03;
+        if (lenType == 0) {
+            unsigned char l; if (!fileStream.read((char*)&l, 1)) return false;
+            packetLength = l;
+        } else if (lenType == 1) {
+            unsigned char l[2]; if (!fileStream.read((char*)l, 2)) return false;
+            packetLength = (l[0] << 8) | l[1];
+        } else if (lenType == 2) {
+            unsigned char l[4]; if (!fileStream.read((char*)l, 4)) return false;
+            packetLength = (l[0] << 24) | (l[1] << 16) | (l[2] << 8) | l[3];
+        } else {
+            return false;
+        }
     } else {
-        packetTag = (firstByte >> 2) & 0x0F;
+        unsigned char l1; if (!fileStream.read((char*)&l1, 1)) return false;
+        if (l1 < 192) {
+            packetLength = l1;
+        } else if (l1 >= 192 && l1 <= 223) {
+            unsigned char l2; if (!fileStream.read((char*)&l2, 1)) return false;
+            packetLength = ((l1 - 192) << 8) + l2 + 192;
+        } else if (l1 == 255) {
+            unsigned char l[4]; if (!fileStream.read((char*)l, 4)) return false;
+            packetLength = (l[0] << 24) | (l[1] << 16) | (l[2] << 8) | l[3];
+        } else {
+            return false;
+        }
     }
 
-    if (packetTag != 3) {
-        return false;
-    }
-	
-	unsigned char secondByte = 0;
-    if (!fileStream.read(reinterpret_cast<char*>(&secondByte), 1)) {
-        return false;
-    }
+    // skipping the body of the packet
+    fileStream.seekg(packetLength, std::ios::cur);
+    if (!fileStream.good()) return false;
 
-    if ((secondByte & 0x80) == 0) {
-        return false;
-    }
+    // reading header of the second packet
+    unsigned char secondByte;
+    if (!fileStream.read(reinterpret_cast<char*>(&secondByte), 1)) return false;
+    if ((secondByte & 0x80) == 0) return false;
 
-    isNewFormat = (secondByte & 0x40) != 0;
+    bool isNewFormat2 = (secondByte & 0x40) != 0;
+    int packetTag2 = isNewFormat2 ? (secondByte & 0x3F) : ((secondByte >> 2) & 0x0F);
 
-    if (isNewFormat) {
-        packetTag = secondByte & 0x3F;
-    } else {
-        packetTag = (secondByte >> 2) & 0x0F;
-    }
-
-    if (packetTag == 3 || packetTag == 9 || packetTag == 18) {
+    if (packetTag2 == 9 || packetTag2 == 18 || packetTag2 == 3) {
         return true;
     }
 
