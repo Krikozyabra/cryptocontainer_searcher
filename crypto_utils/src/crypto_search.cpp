@@ -166,7 +166,28 @@ bool pgp_file(const fs::path &file) {
         packetTag = (firstByte >> 2) & 0x0F;
     }
 
-    if (packetTag == 3) {
+    if (packetTag != 3) {
+        return false;
+    }
+	
+	unsigned char secondByte = 0;
+    if (!fileStream.read(reinterpret_cast<char*>(&secondByte), 1)) {
+        return false;
+    }
+
+    if ((secondByte & 0x80) == 0) {
+        return false;
+    }
+
+    isNewFormat = (secondByte & 0x40) != 0;
+
+    if (isNewFormat) {
+        packetTag = secondByte & 0x3F;
+    } else {
+        packetTag = (secondByte >> 2) & 0x0F;
+    }
+
+    if (packetTag == 3 || packetTag == 9 || packetTag == 18) {
         return true;
     }
 

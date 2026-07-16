@@ -54,7 +54,7 @@ endif()
 add_subdirectory(third_party/entropy)
 add_subdirectory(third_party/tcdecrypt)
 add_subdirectory(third_party/vcdecrypt)
-add_subdirectory(third_party/gpgdecrypt)
+add_subdirectory(third_party/gpgutil)
 add_subdirectory(third_party/Tyfe)
 add_subdirectory(crypto_utils)
 
@@ -96,20 +96,7 @@ elseif(UNIX AND NOT APPLE)
 
 endif()
 
-# ==========================================================================
-# Ship the portable GnuPG engine next to the executable.
-#
-# At runtime pgputil::initialize() looks for the portable engine at
-# "<exe_dir>/gpg_portable/bin/gpg[.exe]" and its home at
-# "<exe_dir>/gpg_portable/home". Copy the tree that lives in
-# third_party/gpg_portable next to the freshly built binary so the program can
-# find it out of the box (primarily needed on Windows, where a portable Gpg4win
-# is bundled, but harmless everywhere).
-#
-# Stale runtime state committed with the tree (lock files and the keyboxd spawn
-# sentinel) is intentionally NOT copied: shipping those can wedge gpg-agent /
-# keyboxd on first launch.
-# ==========================================================================
+if(WIN32)
 set(GPG_PORTABLE_SRC "${CMAKE_CURRENT_SOURCE_DIR}/third_party/gpg_portable")
 
 if(EXISTS "${GPG_PORTABLE_SRC}")
@@ -119,7 +106,6 @@ if(EXISTS "${GPG_PORTABLE_SRC}")
         COMMAND ${CMAKE_COMMAND} -E rm -rf "${GPG_PORTABLE_DST}"
         COMMAND ${CMAKE_COMMAND} -E copy_directory
                 "${GPG_PORTABLE_SRC}" "${GPG_PORTABLE_DST}"
-        # Drop stale runtime state so a clean home ships with the binary.
         COMMAND ${CMAKE_COMMAND} -E rm -f
                 "${GPG_PORTABLE_DST}/home/pubring.kbx.lock"
                 "${GPG_PORTABLE_DST}/home/trustdb.gpg.lock"
@@ -128,7 +114,6 @@ if(EXISTS "${GPG_PORTABLE_SRC}")
         VERBATIM
     )
 
-    # Also stage it for `cmake --install` based packaging.
     install(DIRECTORY "${GPG_PORTABLE_SRC}/"
             DESTINATION "bin/gpg_portable"
             PATTERN "*.lock" EXCLUDE
@@ -137,6 +122,7 @@ if(EXISTS "${GPG_PORTABLE_SRC}")
 else()
     message(WARNING "third_party/gpg_portable not found; the portable GnuPG "
                     "engine will not be bundled next to crypto_search.")
+endif()
 endif()
 
 if(TEST)

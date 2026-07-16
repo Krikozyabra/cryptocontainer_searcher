@@ -64,7 +64,7 @@ int pgp(const fs::path &file, const std::string &password,
     const std::string stem_str = file.stem().string();
     const fs::path decrypted_file{out_decrypted /
                                   fs::path(stem_str + "_decrypted")};
-    if (!pgputil::decryptSymmetric(fs::absolute(file).string(), fs::absolute(decrypted_file).string(),
+    if (!pgputil::decryptSymmetric(fs::absolute(file).generic_string(), fs::absolute(decrypted_file).generic_string(),
                                       password))
         return ERR_DECRYPT;
 

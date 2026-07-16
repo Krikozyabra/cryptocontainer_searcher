@@ -54,14 +54,14 @@ int check_for_enc_container(const fs::directory_entry &folder_entry,
     if (!fs::is_regular_file(folder_entry, ec)) {return return_code; }
 #ifdef LOG_ENABLED
         spdlog::info("File analyzing started for " +
-                     folder_entry.path().string());
+                     fs::absolute(folder_entry).generic_string());
 #endif
-        if (crypto_search::encfs_file(folder_entry.path())) {
-            std::cout << folder_entry.path().parent_path() << std::endl;
+        if (crypto_search::encfs_file(fs::absolute(folder_entry))) {
+            std::cout << fs::absolute(folder_entry).parent_path() << std::endl;
             std::cout << "This folder is encrypted with EncFS" << std::endl;
 #ifdef LOG_ENABLED
             spdlog::info("Folder " +
-                         folder_entry.path().parent_path().string() +
+                         fs::absolute(folder_entry).parent_path().generic_string() +
                          " was determined as EncFS");
 #endif
             if (try_to_decrypt) {
@@ -86,12 +86,12 @@ int check_for_enc_container(const fs::directory_entry &folder_entry,
             std::cout<<std::endl;
             return return_code;
         }
-        if (crypto_search::luks_file(folder_entry.path())) {
-            std::cout << folder_entry.path() << std::endl;
+        if (crypto_search::luks_file(fs::absolute(folder_entry))) {
+            std::cout << fs::absolute(folder_entry).generic_string() << std::endl;
             std::cout << "This is the container and encrypted with LUKS"
                       << std::endl;
 #ifdef LOG_ENABLED
-            spdlog::info("This file " + folder_entry.path().string() +
+            spdlog::info("This file " + fs::absolute(folder_entry).generic_string() +
                          " was determined as LUKS");
 #endif
             if (try_to_decrypt) {
@@ -117,11 +117,11 @@ int check_for_enc_container(const fs::directory_entry &folder_entry,
             return return_code;
         }
 
-        if (crypto_search::pgp_file(folder_entry.path())) {
-            std::cout << folder_entry.path() << std::endl;
+        if (crypto_search::pgp_file(fs::absolute(folder_entry))) {
+            std::cout << fs::absolute(folder_entry).generic_string() << std::endl;
             std::cout << "This is the container and encrypted with PGP\n";
 #ifdef LOG_ENABLED
-            spdlog::info("This file " + folder_entry.path().string() +
+            spdlog::info("This file " + fs::absolute(folder_entry).generic_string() +
                          " was determined as PGP");
 #endif
             if (try_to_decrypt) {
@@ -143,16 +143,17 @@ int check_for_enc_container(const fs::directory_entry &folder_entry,
                         break;
                 }
             }
+			std::cout<<std::endl;
             return return_code;
         }
 
-        if (crypto_search::veracrypt_truecrypt_file(folder_entry.path())) {
-            std::cout << folder_entry.path() << std::endl;
+        if (crypto_search::veracrypt_truecrypt_file(fs::absolute(folder_entry))) {
+            std::cout << fs::absolute(folder_entry).generic_string() << std::endl;
             std::cout << "This is the container and encrypted with "
                          "TrueCrypt\\VeraCrypt"
                       << std::endl;
 #ifdef LOG_ENABLED
-            spdlog::info("This file " + folder_entry.path().string() +
+            spdlog::info("This file " + fs::absolute(folder_entry).generic_string().string() +
                          " was determined as VeraCrypt or TrueCrypt");
 #endif
             if (try_to_decrypt) {

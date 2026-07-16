@@ -235,14 +235,3 @@ if(NOT WIN32)
     find_package(Threads REQUIRED)
     target_link_libraries(tcdecrypt_core PUBLIC Threads::Threads)
 endif()
-
-# ===========================================================================
-# The CLI front-end.
-# ===========================================================================
-if(TCDECRYPT_BUILD_CLI)
-    add_executable(tcdecrypt ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp)
-    target_link_libraries(tcdecrypt PRIVATE tcdecrypt_core)
-    if(NOT MSVC)
-        target_compile_options(tcdecrypt PRIVATE -w)
-    endif()
-endif()
