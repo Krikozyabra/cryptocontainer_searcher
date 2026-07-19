@@ -180,22 +180,25 @@ cd build && ctest
 │   ├── include/crypto_utils/
 │   │   ├── crypto_search.h           # API модуля поиска
 │   │   ├── crypto_decrypt.h          # API модуля дешифрования
+│   │   ├── gpgdecrypt.hpp            # API нативного PGP-дешифрования
 │   │   └── luksdecrypt.h             # API нативного LUKS-дешифрования
 │   └── src/
 │       ├── crypto_search.cpp         # Сигнатурный + энтропийный анализ
 │       ├── crypto_decrypt.cpp        # Дешифрование через встроенные библиотеки
+|       ├── gpgdecrypt.cpp            # PGP через gpgmepp API
 │       └── luksdecrypt.cpp           # LUKS через libcryptsetup C API
 ├── third_party/
 │   ├── entropy/                      # Расчёт энтропии Шеннона
 │   ├── Tyfe/                         # Отсев известных сигнатур файлов
 │   ├── tcdecrypt/                    # Нативное дешифрование TrueCrypt
 │   ├── vcdecrypt/                    # Нативное дешифрование VeraCrypt
-│   ├── gpgdecrypt/                   # Дешифрование PGP/GnuPG (GPGME)
+│   ├── gpg_portable/                 # Сборка GPG под Windows, которая используется для расшифровки на Windows
 │   └── encfsdecrypt/                 # Кроссплатформенное дешифрование EncFS
 ├── tests/
 │   └── test_search.cpp               # Модульные тесты (Catch2)
 ├── cmake/
 │   ├── EncfsDecrypt.cmake            # Обёртка для сборки encfsdecrypt
+│   ├── ucrt-toolchain.cmake          # Toolchain-файл для MinGW
 │   └── mingw-toolchain.cmake         # Toolchain-файл для MinGW
 └── CMakeLists.txt
 ```
