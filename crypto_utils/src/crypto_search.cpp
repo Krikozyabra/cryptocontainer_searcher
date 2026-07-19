@@ -1,7 +1,6 @@
 #include "crypto_utils/crypto_search.h"
 #include "Tyfe/Tyfe.hpp"
 #include "entropy/shannon_entropy.h"
-#include "gpgutil.hpp"
 #include <array>
 #include <cstring>
 #include <filesystem>

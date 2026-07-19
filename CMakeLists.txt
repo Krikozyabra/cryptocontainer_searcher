@@ -53,8 +53,7 @@ endif()
 # Add the external libraries
 add_subdirectory(third_party/entropy)
 add_subdirectory(third_party/tcdecrypt)
-add_subdirectory(third_party/vcdecrypt)
-add_subdirectory(third_party/gpgutil)
+add_subdirectory(third_party/vcdecrypt EXCLUDE_FROM_ALL)
 add_subdirectory(third_party/Tyfe)
 add_subdirectory(crypto_utils)
 
@@ -66,7 +65,6 @@ set(BUILD_LIBRARIES
     crypto_utils
     Threads::Threads
     nlohmann_json::nlohmann_json
-    gpgutil
 )
 
 if(LOG)

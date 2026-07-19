@@ -1,6 +1,6 @@
 #include "crypto_utils/crypto_decrypt.h"
 #include "encfs_decrypt.h"
-#include "gpgutil.hpp"
+#include "crypto_utils/gpgdecrypt.hpp"
 #include "tcdecrypt.hpp"
 #include "vcdecrypt.hpp"
 #ifdef SUPPORT_LUKS
@@ -55,8 +55,8 @@ int luks(const fs::path &file, const std::string &password,
 
     return SUCCESS;
 #else
-    std::cerr << "LUKS decryption is not supported on this operating system.\n";
-    return -1;
+    std::cerr << "LUKS decryption is not supported on Windows. Use the WSL for this reason.\n";
+    return ERR_LUKS_WIN;
 #endif
 }
 

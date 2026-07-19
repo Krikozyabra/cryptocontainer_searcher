@@ -1,6 +1,6 @@
 #include "crypto_utils/crypto_decrypt.h"
 #include "crypto_utils/crypto_search.h"
-#include "gpgutil.hpp"
+#include "crypto_utils/gpgdecrypt.hpp"
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
@@ -11,7 +11,6 @@
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/spdlog.h>
 #endif
-#include <sstream>
 #ifndef _WIN32
 #include <unistd.h>
 #endif
@@ -111,6 +110,9 @@ int check_for_enc_container(const fs::directory_entry &folder_entry,
 #endif
                     if (return_code == crypto_decrypt::SUCCESS)
                         break;
+
+                    if (return_code == crypto_decrypt::ERR_LUKS_WIN)
+                        break;
                 }
             }
             std::cout<<std::endl;
@@ -146,7 +148,6 @@ int check_for_enc_container(const fs::directory_entry &folder_entry,
 			std::cout<<std::endl;
             return return_code;
         }
-<<<<<<< HEAD
 
         if (crypto_search::veracrypt_truecrypt_file(fs::absolute(folder_entry))) {
             std::cout << fs::absolute(folder_entry).generic_string() << std::endl;

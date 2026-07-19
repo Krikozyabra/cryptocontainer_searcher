@@ -1,15 +1,16 @@
-#include "gpgutil.hpp"
-#include <iostream>
-#include <fstream>
+#include "crypto_utils/gpgdecrypt.hpp"
 #include <string>
-#include <vector>
+#include <cstring>
 #include <cstdlib>
 #include <filesystem>
-#include <chrono>
+#include <iostream>
+#include <fstream>
+#include <spdlog/spdlog.h>
 
 #ifdef _WIN32
 #include <windows.h>
 #else
+
 #include <unistd.h>
 #include <limits.h>
 #include <sys/types.h>
@@ -18,8 +19,8 @@
 #include <gpgme++/context.h>
 #include <gpgme++/data.h>
 #include <gpgme++/decryptionresult.h>
+#include <gpgme++/interfaces/passphraseprovider.h>
 #include <gpgme++/global.h>
-#include <gpgme.h>
 #endif
 
 static std::string normalizePath(const std::string& path) {
@@ -29,8 +30,13 @@ static std::string normalizePath(const std::string& path) {
     return p.generic_string(); 
 }
 
-static std::string getExecutableDir() {
+static bool fileExists(const std::string& path) {
+    std::error_code ec;
+    return std::filesystem::exists(path, ec) && std::filesystem::is_regular_file(path, ec);
+}
+
 #ifdef _WIN32
+static std::string getExecutableDir() {
     char path[MAX_PATH];
     DWORD len = GetModuleFileNameA(NULL, path, MAX_PATH);
     if (len > 0) {
@@ -40,25 +46,9 @@ static std::string getExecutableDir() {
             return p.substr(0, pos);
         }
     }
-#else
-    char path[PATH_MAX];
-    ssize_t len = readlink("/proc/self/exe", path, sizeof(path) - 1);
-    if (len != -1) {
-        path[len] = '\0';
-        std::string p(path);
-        size_t pos = p.find_last_of("/");
-        if (pos != std::string::npos) {
-            return p.substr(0, pos);
-        }
-    }
-#endif
     return ".";
 }
 
-static bool fileExists(const std::string& path) {
-    std::error_code ec;
-    return std::filesystem::exists(path, ec) && std::filesystem::is_regular_file(path, ec);
-}
 
 static std::string getGpgBinary() {
     std::string exeDir = getExecutableDir();
@@ -74,7 +64,6 @@ static std::string getGpgHome() {
     return normalizePath(exeDir + "/gpg_portable/home");
 }
 
-#ifdef _WIN32
 static std::string execCommandWithStdin(const std::string& rawCmd, const std::string& inputData, int& exitCode) {
     std::string result;
     SECURITY_ATTRIBUTES sa = {0};
@@ -88,6 +77,9 @@ static std::string execCommandWithStdin(const std::string& rawCmd, const std::st
     SetHandleInformation(hStdOutRead, HANDLE_FLAG_INHERIT, 0);
 
     if (!CreatePipe(&hStdInRead, &hStdInWrite, &sa, 0)) {
+        #ifdef LOG_ENABLED
+           spdlog::error("Error: Creating pipe fault.");
+        #endif
         CloseHandle(hStdOutRead);
         CloseHandle(hStdOutWrite);
         return "";
@@ -108,6 +100,9 @@ static std::string execCommandWithStdin(const std::string& rawCmd, const std::st
 
     if (!CreateProcessA(nullptr, cmdBuf.data(), nullptr, nullptr, TRUE,
                         CREATE_NO_WINDOW, nullptr, nullptr, &si, &pi)) {
+        #ifdef LOG_ENABLED
+           spdlog::error("Error: Due creating proccess with calling portable GnuPG.");
+        #endif
         CloseHandle(hStdOutWrite);
         CloseHandle(hStdOutRead);
         CloseHandle(hStdInRead);
@@ -148,34 +143,30 @@ static std::string execCommandWithStdin(const std::string& rawCmd, const std::st
 #endif
 
 bool pgputil::initialize() {
-    std::string bin = getGpgBinary();
-    
 #ifdef _WIN32
+    std::string bin = getGpgBinary();
     if (!fileExists(bin)) {
-        std::cerr << "Warning: Portable GnuPG binary not found at " << bin << std::endl;
+        #ifdef LOG_ENABLED
+           spdlog::error("Warning: Portable GnuPG binary not found at " + bin);
+        #endif
         return false;
     }
     return true;
 #else
-    GpgME::initializeLibrary(0);
-    gpgme_check_version(nullptr);
+    GpgME::initializeLibrary();
     
-    std::string home = getGpgHome();
-    
-    gpgme_error_t err = gpgme_set_engine_info(GPGME_PROTOCOL_OpenPGP, bin.c_str(), home.c_str());
-    if (err) {
-        std::cerr << "Warning: Failed to set GPGME engine info." << std::endl;
-        return false;
-    }
     return true;
 #endif
 }
+
 
 bool pgputil::decryptSymmetric(const std::string& inputPath, 
                                const std::string& outputPath, 
                                const std::string& passphrase) {
     if (!initialize()) {
-        std::cerr << "Error: GPG is not initialized correctly." << std::endl;
+        #ifdef LOG_ENABLED
+           spdlog::error("Error: GPG is not initialized correctly.");
+        #endif
         return false;
     }
 
@@ -183,7 +174,9 @@ bool pgputil::decryptSymmetric(const std::string& inputPath,
     std::string cleanOutput = normalizePath(outputPath);
     
     if (!fileExists(cleanInput)) {
-        std::cerr << "Error: File does not exist: " << cleanInput << std::endl;
+        #ifdef LOG_ENABLED
+           spdlog::error("Error: File does not exist: " + cleanInput);
+        #endif
         return false;
     }
 
@@ -204,42 +197,56 @@ bool pgputil::decryptSymmetric(const std::string& inputPath,
         std::string pass;
     public:
         SymPassphraseProvider(const std::string& p) : pass(p) {}
-        const char* getPassphrase(const char*, const char*, bool, bool&) override {
-            return pass.c_str();
+        char* getPassphrase(const char*, const char*, bool, bool&) override {
+            return strdup(pass.c_str());
         }
     };
 
     SymPassphraseProvider provider(passphrase);
     ctx->setPassphraseProvider(&provider);
     ctx->setPinentryMode(GpgME::Context::PinentryLoopback);
-
-    FILE* inFile = fopen(cleanInput.c_str(), "rb");
-    if (!inFile) return false;
     
-    FILE* outFile = fopen(cleanOutput.c_str(), "wb");
-    if (!outFile) {
-        fclose(inFile);
+    std::error_code ec;
+    auto fileSize = std::filesystem::file_size(cleanInput, ec);
+    if (ec) {
+        #ifdef LOG_ENABLED
+           spdlog::error("Error: Could not determine file size: " + ec.message());
+        #endif
         return false;
     }
 
-    gpgme_data_t raw_in, raw_out;
-    gpgme_data_new_from_stream(&raw_in, inFile);
-    gpgme_data_new_from_stream(&raw_out, outFile);
+    // 2. Pass the file size as the length parameter
+    GpgME::Data inData(cleanInput.c_str(), static_cast<off_t>(0), static_cast<size_t>(fileSize));
 
-    GpgME::Data inData(raw_in);
-    GpgME::Data outData(raw_out);
+    GpgME::Data outData;
 
     GpgME::DecryptionResult res = ctx->decrypt(inData, outData);
 
-    fclose(inFile);
-    fclose(outFile);
-
     if (res.error()) {
-        std::cerr << "GPGME Decryption error: " << res.error().asString() << std::endl;
-        std::filesystem::remove(cleanOutput);
+        #ifdef LOG_ENABLED
+           spdlog::error("GPGME Decryption error: " + res.error().asStdString());
+        #endif
         return false;
     }
 
+    std::ofstream outFile(cleanOutput, std::ios::binary);
+    if (!outFile) {
+        #ifdef LOG_ENABLED
+           spdlog::error("Error: Could not open output file for writing: " + cleanOutput);
+        #endif
+        return false;
+    }
+
+    // Rewind outData to the beginning
+    outData.seek(0, SEEK_SET);
+
+    char buffer[4096];
+    ssize_t bytesRead;
+    while ((bytesRead = outData.read(buffer, sizeof(buffer))) > 0) {
+        outFile.write(buffer, bytesRead);
+    }
+
+    outFile.close();
     return fileExists(cleanOutput);
 #endif
 }

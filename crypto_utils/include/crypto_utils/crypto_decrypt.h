@@ -8,11 +8,8 @@ namespace crypto_decrypt {
 
 // Return constants
 constexpr int SUCCESS = 0;
-constexpr int ERR_PIPE_OPEN = 1;
-constexpr int ERR_DECRYPT = 2;
-constexpr int ERR_MOUNT = 3;
-constexpr int ERR_LOOP_DEVICE = 4;
-constexpr int ERR_QUERY_PIPE = 5;
+constexpr int ERR_DECRYPT = 1;
+constexpr int ERR_LUKS_WIN = 2;
 
 int encfs(const fs::path &, const std::string&, const fs::path &);
 int truecrypt(const fs::path &, const std::string&, const fs::path &);
