@@ -94,6 +94,8 @@ elseif(UNIX AND NOT APPLE)
 
 endif()
 
+install(TARGETS crypto_search RUNTIME DESTINATION "bin")
+
 if(WIN32)
 set(GPG_PORTABLE_SRC "${CMAKE_CURRENT_SOURCE_DIR}/third_party/gpg_portable")
 
@@ -116,7 +118,6 @@ if(EXISTS "${GPG_PORTABLE_SRC}")
             DESTINATION "bin/gpg_portable"
             PATTERN "*.lock" EXCLUDE
             PATTERN "gnupg_spawn_keyboxd_sentinel.lock" EXCLUDE)
-    install(TARGETS crypto_search RUNTIME DESTINATION "bin")
 else()
     message(WARNING "third_party/gpg_portable not found; the portable GnuPG "
                     "engine will not be bundled next to crypto_search.")

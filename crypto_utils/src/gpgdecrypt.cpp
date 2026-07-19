@@ -5,12 +5,14 @@
 #include <filesystem>
 #include <iostream>
 #include <fstream>
+
+#ifdef LOG_ENABLED
 #include <spdlog/spdlog.h>
+#endif
 
 #ifdef _WIN32
 #include <windows.h>
 #else
-
 #include <unistd.h>
 #include <limits.h>
 #include <sys/types.h>
