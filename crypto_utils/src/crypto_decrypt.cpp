@@ -41,16 +41,17 @@ int encfs(const fs::path &file, const std::string &password,
 
 int luks(const fs::path &file, const std::string &password,
          const fs::path &out_decrypted) {
-    const std::string file_stem = file.stem().string();
-    const fs::path out_file{out_decrypted / fs::path(file_stem + "_decrypted")};
+    const std::string stem_str = file.stem().string();
+    const fs::path decrypted_file{out_decrypted /
+                                  fs::path(stem_str + "_decrypted")};
 #ifdef SUPPORT_LUKS
-    int res = luksdecrypt::decrypt_to_file(file, password, out_file);
+    int res = luksdecrypt::decrypt_to_file(file, password, decrypted_file);
 
     if (res != 0)
         return ERR_DECRYPT;
 
     std::cout << "The decrypted luks container was decrypted at:\n"
-              << out_file << "\n";
+              << decrypted_file << "\n";
 
     return SUCCESS;
 #else
@@ -64,7 +65,7 @@ int pgp(const fs::path &file, const std::string &password,
     const std::string stem_str = file.stem().string();
     const fs::path decrypted_file{out_decrypted /
                                   fs::path(stem_str + "_decrypted")};
-    if (!pgputil::decryptSymmetric(fs::absolute(file).string(), fs::absolute(decrypted_file).string(),
+    if (!pgputil::decryptSymmetric(file.generic_string(), decrypted_file.generic_string(),
                                       password))
         return ERR_DECRYPT;
 
@@ -75,8 +76,8 @@ int pgp(const fs::path &file, const std::string &password,
 int truecrypt(const fs::path &file, const std::string &password,
               const fs::path &out_decrypted) {
     const std::string stem_str = file.stem().string();
-    const fs::path decrypted_file(out_decrypted /
-                                  fs::path(stem_str + "_decrypted"));
+    const fs::path decrypted_file{out_decrypted /
+                                  fs::path(stem_str + "_decrypted")};
     tcdecrypt::OpenOptions opt;
     opt.password = password;
     opt.path = file.string();
@@ -94,8 +95,8 @@ int truecrypt(const fs::path &file, const std::string &password,
 int veracrypt(const fs::path &file, const std::string &password,
               const fs::path &out_decrypted) {
     const std::string stem_str = file.stem().string();
-    const fs::path decrypted_file(out_decrypted /
-                                  fs::path(stem_str + "_decrypted"));
+    const fs::path decrypted_file{out_decrypted /
+                                  fs::path(stem_str + "_decrypted")};
     vcdecrypt::OpenOptions opt;
     opt.password = password;
     opt.path = file.string();

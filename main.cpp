@@ -46,27 +46,23 @@ void print_usage() {
 
 void print_version() { std::cout << "0.1.0\n"; }
 
-int check_for_enc_container(const fs::directory_entry &path_to_object,
+int check_for_enc_container(const fs::directory_entry &folder_entry,
                             const bool try_to_decrypt, const json &pass_file,
                             const fs::path &out_decrypted) {
     std::error_code ec;
     int return_code{crypto_decrypt::SUCCESS};
 
-<<<<<<< HEAD
     if (!fs::is_regular_file(folder_entry, ec)) {return return_code; }
-=======
-    if (fs::is_regular_file(path_to_object, ec)) {
->>>>>>> parent of 1a1a9c9 (Some refactoring code)
 #ifdef LOG_ENABLED
         spdlog::info("File analyzing started for " +
-                     path_to_object.path().string());
+                     fs::absolute(folder_entry).generic_string());
 #endif
-        if (crypto_search::encfs_file(path_to_object.path())) {
-            std::cout << path_to_object.path().parent_path() << std::endl;
+        if (crypto_search::encfs_file(fs::absolute(folder_entry))) {
+            std::cout << fs::absolute(folder_entry).parent_path() << std::endl;
             std::cout << "This folder is encrypted with EncFS" << std::endl;
 #ifdef LOG_ENABLED
             spdlog::info("Folder " +
-                         path_to_object.path().parent_path().string() +
+                         fs::absolute(folder_entry).parent_path().generic_string() +
                          " was determined as EncFS");
 #endif
             if (try_to_decrypt) {
@@ -79,7 +75,7 @@ int check_for_enc_container(const fs::directory_entry &path_to_object,
                                  passphrase);
 #endif
                     return_code = crypto_decrypt::encfs(
-                        path_to_object, passphrase, out_decrypted);
+                        folder_entry, passphrase, out_decrypted);
 #ifdef LOG_ENABLED
                     spdlog::info("Return code for decryption is " +
                                  std::to_string(return_code));
@@ -90,12 +86,12 @@ int check_for_enc_container(const fs::directory_entry &path_to_object,
             }
             return return_code;
         }
-        if (crypto_search::luks_file(path_to_object.path())) {
-            std::cout << path_to_object.path() << std::endl;
+        if (crypto_search::luks_file(fs::absolute(folder_entry))) {
+            std::cout << fs::absolute(folder_entry).generic_string() << std::endl;
             std::cout << "This is the container and encrypted with LUKS"
                       << std::endl;
 #ifdef LOG_ENABLED
-            spdlog::info("This file " + path_to_object.path().string() +
+            spdlog::info("This file " + fs::absolute(folder_entry).generic_string() +
                          " was determined as LUKS");
 #endif
             if (try_to_decrypt) {
@@ -108,7 +104,7 @@ int check_for_enc_container(const fs::directory_entry &path_to_object,
                                  passphrase);
 #endif
                     return_code = crypto_decrypt::luks(
-                        path_to_object, passphrase, out_decrypted);
+                        folder_entry, passphrase, out_decrypted);
 #ifdef LOG_ENABLED
                     spdlog::info("Return code for decryption is " +
                                  std::to_string(return_code));
@@ -120,19 +116,12 @@ int check_for_enc_container(const fs::directory_entry &path_to_object,
             std::cout<<std::endl;
             return return_code;
         }
-<<<<<<< HEAD
 
-        if (crypto_search::pgp_file(folder_entry.path())) {
-            std::cout << folder_entry.path() << std::endl;
+        if (crypto_search::pgp_file(fs::absolute(folder_entry))) {
+            std::cout << fs::absolute(folder_entry).generic_string() << std::endl;
             std::cout << "This is the container and encrypted with PGP\n";
-=======
-        if (crypto_search::pgp_file(path_to_object.path())) {
-            std::cout << path_to_object.path() << std::endl;
-            std::cout << "This is the container and encrypted with PGP"
-                      << std::endl;
->>>>>>> parent of 1a1a9c9 (Some refactoring code)
 #ifdef LOG_ENABLED
-            spdlog::info("This file " + path_to_object.path().string() +
+            spdlog::info("This file " + fs::absolute(folder_entry).generic_string() +
                          " was determined as PGP");
 #endif
             if (try_to_decrypt) {
@@ -145,7 +134,7 @@ int check_for_enc_container(const fs::directory_entry &path_to_object,
                                  passphrase);
 #endif
                     return_code = crypto_decrypt::pgp(
-                        path_to_object, passphrase, out_decrypted);
+                        folder_entry, passphrase, out_decrypted);
 #ifdef LOG_ENABLED
                     spdlog::info("Return code for decryption is " +
                                  std::to_string(return_code));
@@ -154,21 +143,18 @@ int check_for_enc_container(const fs::directory_entry &path_to_object,
                         break;
                 }
             }
+			std::cout<<std::endl;
             return return_code;
         }
 <<<<<<< HEAD
 
-        if (crypto_search::veracrypt_truecrypt_file(folder_entry.path())) {
-            std::cout << folder_entry.path() << std::endl;
-=======
-        if (crypto_search::veracrypt_truecrypt_file(path_to_object.path())) {
-            std::cout << path_to_object.path() << std::endl;
->>>>>>> parent of 1a1a9c9 (Some refactoring code)
+        if (crypto_search::veracrypt_truecrypt_file(fs::absolute(folder_entry))) {
+            std::cout << fs::absolute(folder_entry).generic_string() << std::endl;
             std::cout << "This is the container and encrypted with "
                          "TrueCrypt\\VeraCrypt"
                       << std::endl;
 #ifdef LOG_ENABLED
-            spdlog::info("This file " + path_to_object.path().string() +
+            spdlog::info("This file " + fs::absolute(folder_entry).generic_string() +
                          " was determined as VeraCrypt or TrueCrypt");
 #endif
             if (try_to_decrypt) {
@@ -182,7 +168,7 @@ int check_for_enc_container(const fs::directory_entry &path_to_object,
                         passphrase);
 #endif
                     return_code = crypto_decrypt::truecrypt(
-                        path_to_object, passphrase, out_decrypted);
+                        folder_entry, passphrase, out_decrypted);
 #ifdef LOG_ENABLED
                     spdlog::info("Return code for decryption is " +
                                  std::to_string(return_code));
@@ -199,7 +185,7 @@ int check_for_enc_container(const fs::directory_entry &path_to_object,
                                      passphrase);
 #endif
                         return_code = crypto_decrypt::veracrypt(
-                            path_to_object, passphrase, out_decrypted);
+                            folder_entry, passphrase, out_decrypted);
 #ifdef LOG_ENABLED
                         spdlog::info("Return code for decryption is " +
                                      std::to_string(return_code));
@@ -214,12 +200,15 @@ int check_for_enc_container(const fs::directory_entry &path_to_object,
         }
 
     if (ec == std::errc::permission_denied) {
-        std::cout << path_to_object.path() << std::endl;
+        std::cout << folder_entry.path() << std::endl;
         std::cout << "No access to this file. Run in 'sudo' mode" << std::endl;
+#ifdef LOG_ENABLED
+        spdlog::warn("No access to file " + folder_entry.path().string() + ". Run is 'sudo' mode");
+#endif
     }
 
 #ifdef LOG_ENABLED
-    spdlog::warn("This file " + path_to_object.path().string() +
+    spdlog::warn("This file " + folder_entry.path().string() +
                  " was determined as nothing");
 #endif
 
@@ -230,7 +219,7 @@ void folder_traveler(const fs::path &searching_folder, const json &pass_file,
                      const bool is_recursive, const bool try_to_decrypt,
                      const fs::path &out_decrypted) {
 #ifdef LOG_ENABLED
-    spdlog::info("Folder traveling started");
+    spdlog::info("Folder traveling started for " + searching_folder.string());
 #endif
     std::error_code ec;
     auto dir_iter = fs::directory_iterator(searching_folder, ec);
@@ -263,11 +252,7 @@ void folder_traveler(const fs::path &searching_folder, const json &pass_file,
                                                     pass_file, out_decrypted);
         switch (return_result) {
         case crypto_decrypt::ERR_DECRYPT:
-<<<<<<< HEAD
             std::cerr << "No password found for this container\n\n";
-=======
-            std::cerr << "No password found for this container" << std::endl;
->>>>>>> parent of 1a1a9c9 (Some refactoring code)
 #ifdef LOG_ENABLED
             spdlog::warn("For entry " + entry.path().string() +
                          " password not found");
@@ -283,41 +268,6 @@ void folder_traveler(const fs::path &searching_folder, const json &pass_file,
                             try_to_decrypt, out_decrypted);
         }
     }
-}
-
-bool is_command_in_path(const std::string &command) {
-    const char *path_env = std::getenv("PATH");
-    if (!path_env) {
-        return false;
-    }
-
-    std::stringstream ss(path_env);
-    std::string directory{};
-
-#ifdef _WIN32
-    const char delimiter{';'};
-#else
-    const char delimiter{':'};
-#endif
-
-    while (std::getline(ss, directory, delimiter)) {
-        fs::path full_path = fs::path(directory) / command;
-        std::error_code ec;
-
-        if (fs::exists(full_path, ec) && fs::is_regular_file(full_path, ec)) {
-            auto perms = fs::status(full_path, ec).permissions();
-            if (!ec) {
-                // Check if executable by owner, group, or others
-                bool is_exec =
-                    (perms & (fs::perms::owner_exec | fs::perms::group_exec |
-                              fs::perms::others_exec)) != fs::perms::none;
-                if (is_exec) {
-                    return true;
-                }
-            }
-        }
-    }
-    return false;
 }
 
 bool parse_arguments(int argc, char **argv, AppConfig &config) {
@@ -380,8 +330,7 @@ int main(int argc, char **argv) {
     AppConfig config;
 #ifdef LOG_ENABLED
     setup_file_logging();
-    spdlog::info("Some info new logger");
-    spdlog::error("error in logs");
+    spdlog::info("Logger start message");
 #endif
 
     if (!pgputil::initialize()){
